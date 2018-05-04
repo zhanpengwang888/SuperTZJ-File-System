@@ -8,7 +8,14 @@
 #define N_DBLOCKS 10
 #define N_IBLOCKS 4
 #define BLOCK_SIZE 512
+#define SUPER_SIZE 512
+#define BOOT_SIZE 512
 #define MAX_OPEN_FILE 175
+#define INODE_RATE 1/100
+#define DEFAULT_DATA   'a'
+#define DEFAULT_SIZE 1048576  // 1MB
+#define DIRECTORY_FILE 0
+#define NORMAL_FILE 1
 
 
 typedef struct superblock {
@@ -49,6 +56,15 @@ typedef struct DirectoryEntry {
 	int inode_entry;
 	char file_name[28];
 } directory_entry;
+
+Superblock* sb; // super block
+file_node open_file_table[MAX_OPEN_FILE];
+int cur_directory;
+int num_of_total_data_block;
+int num_of_total_inode;
+
+
+
 
 
 
