@@ -1,22 +1,58 @@
-#include "file_util.h"
+#include "fs.h"
+#include 
 
 
+// update root in superblock, update inode, open root directory
+int f_mount(char* destination, char* diskname) {
+	int fd;
+	fd = open(diskname, O_RDWR);
+	if (fd == -1) {
+		fd = format_default_size(diskname);
+		if (fd == -1) {
+			return EXIT_FAILURE;
+		}
+		else {
+			open(fd, O_RDWR);
+		}
+	}
+	sb->root = destination;
+	long int filesize = 0;
+	fseek(fd, 0, SEEK_END);
+	filesize = ftell(fd);
+	fseek(fd, 0, SEEK_SET);
+	num_of_total_inode = (sb->data_offset - sb->inode_offset) * BOOT_SIZE / sizeof(inode);
+	
+	for (int i = 0; i < num_of_total_inode; ++i) {
+		disk_inode_region[i] = malloc(sizeof(inode));
+		fseek(fd, BOOT_SIZE + SUPER_SIZE + i * sizeof(inode), SEEK_SET);
+		read(fd, disk_inode_region[i], sizeof(inode));
+	}
+	disk_inode_region[0]->nlink = 1;
+	disk_inode_region[0]->filename = destination;
+	fseek(fd, BOOT_SIZE + SUPER_SIZE, SEEK_SET);
+	write(fd, disk_inode_region[0], sizeof(inode));
+	for (int i = 0; i < MAX_OPEN_FILE; i++) {
+		open_file_table[i] = malloc(sizeof(file_node));
+		open_file_table[i]->inode_entry = 0;
+		open_file_table[i]->block_offset = 0;
+		open_file_table[i]->byte_offset = 0;
+	}
+}
 
-/*
-Our disk image:
 
-----------------------------------------------------
-			Boot block: 512 bytes
-----------------------------------------------------
-			Super block: 512 bytes
-----------------------------------------------------
-			Inode region
-----------------------------------------------------
-			Data block
-----------------------------------------------------
-*/
+// free everything that has been malloced
+int f_unmount(char* diskname) {
+	for (int i = 0; i < MAX_OPEN_FILE; i++) {
+		free(open_file_table[i]);
+	}
+	
+	num_of_total_inode = (sb->data_offset - sb->inode_offset) * BOOT_SIZE / sizeof(inode);
+	for (int i = 0; i < num_of_total_inode; ++i) {
+		free(disk_inode_region[i]);
+	}
 
-
+	free(sb);
+}
 
 
 
@@ -38,7 +74,7 @@ int format_default_size(char* filename){
 	sb->size = BLOCK_SIZE;
 	sb->inode_offset = 0;
 	sb->data_offset = DEFAULT_SIZE * INODE_RATE / BLOCK_SIZE;
-	sb->free_inode = 0;
+	sb->free_inode = 1;
 	sb->free_block = 0;
 
 	num_of_total_data_block = (DEFAULT_SIZE - BOOT_SIZE - SUPER_SIZE - (sb->data_offset - sb->inode_offset) * BOOT_SIZE) / BOOT_SIZE;
@@ -179,16 +215,3 @@ int format_with_given_size(char* filename, long int file_size){
 }
 
 // we need to parse the command to see which format we will use
-
-
-
-
-
-
-
-
-
-
-
-
-

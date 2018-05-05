@@ -16,6 +16,7 @@
 #define DEFAULT_SIZE 1048576  // 1MB
 #define DIRECTORY_FILE 0
 #define NORMAL_FILE 1
+#define MAX_INODE_NUM 100000
 
 
 typedef struct superblock {
@@ -59,9 +60,11 @@ typedef struct DirectoryEntry {
 
 Superblock* sb; // super block
 file_node open_file_table[MAX_OPEN_FILE];
+inode disk_inode_region[MAX_INODE_NUM];
 int cur_directory;
 int num_of_total_data_block;
 int num_of_total_inode;
+int disk;
 
 
 
