@@ -4,6 +4,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+//added Sat 12pm -- flag problem
+#include <unistd.h>
+#include <sys/stat.h> 
+#include <fcntl.h>
 
 #define N_DBLOCKS 10
 #define N_IBLOCKS 4
@@ -17,6 +21,7 @@
 #define DIRECTORY_FILE 0
 #define NORMAL_FILE 1
 #define MAX_INODE_NUM 100000
+#define INODE_SIZE sizeof(inode)
 
 
 typedef struct superblock {
@@ -45,7 +50,7 @@ typedef struct Inode {
 	char file_name[28];
 	int padding;
 } inode;
-
+//entry in open file table
 typedef struct file_entry {
 	int inode_entry;
 	int block_offset;

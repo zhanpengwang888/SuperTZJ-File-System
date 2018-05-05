@@ -85,10 +85,10 @@ void ourPrompt()
 									   // a little bit verbose, restore when all bug fixed
 	if (gethostname(host, MAXLEN) == 0)
 	{
-		printf("[用心写bug，用脚写shell, (ヘ･_･)ヘ┳━┳ ┫ ┻━┻ ︵ヽ(`Д´)ﾉ︵ ┻━┻ ┣ﾍ(^▽^ﾍ)Ξ(ﾟ▽ﾟ*)ﾉ┳━┳, ¯\\_(ツ)_/¯ TZJ Shell]\n[%s@%s ", username, host);
+		printf("[用心写bug，用脚写shell: %s@%s ", username, host);
 	}
 	else
-		printf("[用心写bug，用脚写shell, (ヘ･_･)ヘ┳━┳ ┫ ┻━┻ ︵ヽ(`Д´)ﾉ︵ ┻━┻ ┣ﾍ(^▽^ﾍ)Ξ(ﾟ▽ﾟ*)ﾉ┳━┳, ¯\\_(ツ)_/¯ TZJ Shell]\n[%s@unknown ", username);
+		printf("[用心写bug，用脚写shell,%s@unknown ", username);
 
 	if (strlen(path) < strlen(homedirectory) || strncmp(path, homedirectory, strlen(homedirectory)))
 		printf("%s]", path);

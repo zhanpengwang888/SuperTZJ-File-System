@@ -17,9 +17,6 @@ Our disk image:
 */
 
 
-
-
-
 int format_default_size(char* filename){
 	int fd;
 	fd = open(filename, O_RDWR | O_TRUNC | O_CREAT);
@@ -27,14 +24,14 @@ int format_default_size(char* filename){
 		return EXIT_FAILURE;
 	}
 	ftruncate(fd, DEFAULT_SIZE);
-	char *bootblock = malloc(BOOT_SIZE);
+	char *bootblock = (char*)malloc(BOOT_SIZE);
 	memset(bootblock, DEFAULT_DATA, BOOT_SIZE);
-	out = write(fd, bootblock, BOOT_SIZE);
+	int out = write(fd, bootblock, BOOT_SIZE);
 	if (out != BOOT_SIZE) {
 		return EXIT_FAILURE;
 	}
 	free(bootblock);
-	sb = (Superblock*) malloc(sizeof(SuperBlock));
+	sb = (Superblock*) malloc(sizeof(Superblock));
 	sb->size = BLOCK_SIZE;
 	sb->inode_offset = 0;
 	sb->data_offset = DEFAULT_SIZE * INODE_RATE / BLOCK_SIZE;
@@ -42,17 +39,18 @@ int format_default_size(char* filename){
 	sb->free_block = 0;
 
 	num_of_total_data_block = (DEFAULT_SIZE - BOOT_SIZE - SUPER_SIZE - (sb->data_offset - sb->inode_offset) * BOOT_SIZE) / BOOT_SIZE;
-	fseek(fd, BOOT_SIZE, SEEK_SET);
+	//instead of fseek, we should use lseek for file descriptor
+	lseek(fd, BOOT_SIZE, SEEK_SET);
 	write(fd, sb, SUPER_SIZE);
 
 	for (int i = 0; i < num_of_total_data_block; i++) {
 		if (i == num_of_total_data_block - 1) {
 			int to_write = -1;
-			fseek(fd, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + i * BLOCK_SIZE, SEEK_SET);
+			lseek(fd, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + i * BLOCK_SIZE, SEEK_SET);
 			write(fd, &to_write, sizeof(int));
 		}
 		else {
-			fseek(fd, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + i * BLOCK_SIZE, SEEK_SET);
+			lseek(fd, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + i * BLOCK_SIZE, SEEK_SET);
 			write(fd, &i, sizeof(int));
 		}
 	}
@@ -76,7 +74,9 @@ int format_default_size(char* filename){
 
 	default_inode->i2block = 0;
 	default_inode->i3block = 0;
-	default_inode->file_name = "";
+	//can't directly assign, use strcpy
+	//default_inode->file_name = "";
+	strcpy(default_inode->file_name,"");
 	default_inode->padding = 0;
 
 	num_of_total_inode = (sb->data_offset - sb->inode_offset) * BOOT_SIZE / sizeof(inode);
@@ -84,18 +84,20 @@ int format_default_size(char* filename){
 	for (int i = 0; i < num_of_total_inode; ++i) {
 		if (i == num_of_total_inode - 1) {
 			default_inode->next_inode = -1;
-			fseek(fd, BOOT_SIZE + SUPER_SIZE + sb->inode_offset * BLOCK_SIZE + i * sizeof(inode), SEEK_SET);
+			lseek(fd, BOOT_SIZE + SUPER_SIZE + sb->inode_offset * BLOCK_SIZE + i * sizeof(inode), SEEK_SET);
 			write(fd, default_inode, sizeof(inode));
 		}
 		else {
 			default_inode->next_inode = i + 1;
-			fseek(fd, BOOT_SIZE + SUPER_SIZE + sb->inode_offset * BLOCK_SIZE + i * sizeof(inode), SEEK_SET);
+			lseek(fd, BOOT_SIZE + SUPER_SIZE + sb->inode_offset * BLOCK_SIZE + i * sizeof(inode), SEEK_SET);
 			write(fd, default_inode, sizeof(inode));
 		}
 	}
 
 	free(default_inode);
 	close(fd);
+	//need to replace by predefined
+	return 0;
 }
 
 
@@ -106,14 +108,14 @@ int format_with_given_size(char* filename, long int file_size){
 		return EXIT_FAILURE;
 	}
 	ftruncate(fd, file_size);
-	char *bootblock = malloc(BOOT_SIZE);
+	char *bootblock = (char*) malloc(BOOT_SIZE);
 	memset(bootblock, DEFAULT_DATA, BOOT_SIZE);
-	out = write(fd, bootblock, BOOT_SIZE);
+	int out = write(fd, bootblock, BOOT_SIZE);
 	if (out != BOOT_SIZE) {
 		return EXIT_FAILURE;
 	}
 	free(bootblock);
-	sb = (Superblock*) malloc(sizeof(SuperBlock));
+	sb = (Superblock*) malloc(sizeof(Superblock));
 	sb->size = BLOCK_SIZE;
 	sb->inode_offset = 0;
 	sb->data_offset = file_size * INODE_RATE / BLOCK_SIZE;
@@ -121,17 +123,17 @@ int format_with_given_size(char* filename, long int file_size){
 	sb->free_block = 0;
 
 	num_of_total_data_block = (file_size - BOOT_SIZE - SUPER_SIZE - (sb->data_offset - sb->inode_offset) * BOOT_SIZE) / BOOT_SIZE;
-	fseek(fd, BOOT_SIZE, SEEK_SET);
+	lseek(fd, BOOT_SIZE, SEEK_SET);
 	write(fd, sb, SUPER_SIZE);
 
 	for (int i = 0; i < num_of_total_data_block; i++) {
 		if (i == num_of_total_data_block - 1) {
 			int to_write = -1;
-			fseek(fd, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + i * BLOCK_SIZE, SEEK_SET);
+			lseek(fd, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + i * BLOCK_SIZE, SEEK_SET);
 			write(fd, &to_write, sizeof(int));
 		}
 		else {
-			fseek(fd, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + i * BLOCK_SIZE, SEEK_SET);
+			lseek(fd, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + i * BLOCK_SIZE, SEEK_SET);
 			write(fd, &i, sizeof(int));
 		}
 	}
@@ -155,7 +157,8 @@ int format_with_given_size(char* filename, long int file_size){
 
 	default_inode->i2block = 0;
 	default_inode->i3block = 0;
-	default_inode->file_name = "";
+	//default_inode->file_name = "";
+	strcpy(default_inode->file_name,"");
 	default_inode->padding = 0;
 
 	num_of_total_inode = (sb->data_offset - sb->inode_offset) * BOOT_SIZE / sizeof(inode);
@@ -163,12 +166,12 @@ int format_with_given_size(char* filename, long int file_size){
 	for (int i = 0; i < num_of_total_inode; ++i) {
 		if (i == num_of_total_inode - 1) {
 			default_inode->next_inode = -1;
-			fseek(fd, BOOT_SIZE + SUPER_SIZE + sb->inode_offset * BLOCK_SIZE + i * sizeof(inode), SEEK_SET);
+			lseek(fd, BOOT_SIZE + SUPER_SIZE + sb->inode_offset * BLOCK_SIZE + i * sizeof(inode), SEEK_SET);
 			write(fd, default_inode, sizeof(inode));
 		}
 		else {
 			default_inode->next_inode = i + 1;
-			fseek(fd, BOOT_SIZE + SUPER_SIZE + sb->inode_offset * BLOCK_SIZE + i * sizeof(inode), SEEK_SET);
+			lseek(fd, BOOT_SIZE + SUPER_SIZE + sb->inode_offset * BLOCK_SIZE + i * sizeof(inode), SEEK_SET);
 			write(fd, default_inode, sizeof(inode));
 		}
 	}
@@ -176,6 +179,8 @@ int format_with_given_size(char* filename, long int file_size){
 	free(default_inode);
 	close(fd);
 	disk = fd;
+	//need to replace by predefined
+	return 0;
 }
 
 // we need to parse the command to see which format we will use
