@@ -9,7 +9,8 @@ int f_mount(char* destination, char* diskname);
 int f_unmount(char* diskname);
 int format_default_size(char* filename);
 int format_with_given_size(char* filename, long int file_size);
-
+int fseek(int fd, long int offset, char* whence);
+void rewind(int fd);
 
 
 

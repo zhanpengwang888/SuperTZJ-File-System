@@ -215,3 +215,133 @@ int format_with_given_size(char* filename, long int file_size){
 }
 
 // we need to parse the command to see which format we will use
+
+
+int f_seek(int fd, long int offset, char* whence) {
+	if (fd < 0 or fd > MAX_OPEN_FILE) {
+		return EXIT_FAILURE;
+	}
+	file_node* cur_file = open_file_table[fd];
+	if (cur_file == NULL) {
+		// the file has not been opened
+		return EXIT_FAILURE;
+	}
+	int inode_idx = cur_file->inode_entry;
+	if (inode_idx > num_of_total_inode) {
+		// the file doesn't exist
+		return EXIT_FAILURE;
+	}
+	else if (disk_inode_region[inode_idx]->nlink < 1) {
+		return EXIT_FAILURE;
+	}
+	else {
+		if (strcmp(whence, "SEEK_SET") == 0) {
+			if (offset > disk_inode_region[inode_idx]->size) {
+				return EXIT_FAILURE;
+			}
+			cur_file->block_offset = offset / BLOCK_SIZE;
+			cur_file->byte_offset = offset % BLOCK_SIZE;
+		}
+		else if (strcmp(whence, "SEEK_CUR") == 0) {
+			long int to_modify = cur_file->block_offset * BLOCK_SIZE + cur_file->byte_offset + offset;
+			if (to_modify > disk_inode_region[inode_idx]->size) {
+				return EXIT_FAILURE;
+			}
+			cur_file->block_offset = to_modify / BLOCK_SIZE;
+			cur_file->byte_offset = to_modify % BLOCK_SIZE;
+		}
+		else if (strcmp(whence, "SEEK_END") == 0) {
+			if (offset > 0) {
+				return EXIT_FAILURE;
+			}
+			long int to_modify = disk_inode_region[inode_idx]->size - offset;
+			cur_file->block_offset = to_modify / BLOCK_SIZE;
+			cur_file->byte_offset = to_modify % BLOCK_SIZE;
+		}
+	}
+	return EXIT_SUCCESS;
+}
+
+
+void rewind(int fd) {
+	if (fd < 0 or fd > MAX_OPEN_FILE) {
+		return EXIT_FAILURE;
+	}
+	file_node* cur_file = open_file_table[fd];
+	if (cur_file == NULL) {
+		// the file has not been opened
+		return EXIT_FAILURE;
+	}
+	int inode_idx = cur_file->inode_entry;
+	if (inode_idx > num_of_total_inode) {
+		// the file doesn't exist
+		return EXIT_FAILURE;
+	}
+	else if (disk_inode_region[inode_idx]->nlink < 1) {
+		return EXIT_FAILURE;
+	}
+	else {
+		cur_file->block_offset = 0;
+		cur_file->byte_offset = 0;
+	}
+	return EXIT_SUCCESS;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
