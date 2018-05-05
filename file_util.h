@@ -3,26 +3,32 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
+#include <cstring>
 //added Sat 12pm -- flag problem
 #include <unistd.h>
 #include <sys/stat.h> 
 #include <fcntl.h>
+//c++ lib
+#include <iostream>
+#include <string>
 
-#define N_DBLOCKS 10
-#define N_IBLOCKS 4
+//super block information
 #define BLOCK_SIZE 512
 #define SUPER_SIZE 512
 #define BOOT_SIZE 512
-#define MAX_OPEN_FILE 175
-#define INODE_RATE 1/100
-#define DEFAULT_DATA   'a'
+#define MAX_OPEN_FILE 175 //why 175?
+
+#define DEFAULT_DATA   'a' //sha?
 #define DEFAULT_SIZE 1048576  // 1MB
+//for file type
 #define DIRECTORY_FILE 0
 #define NORMAL_FILE 1
+//inode information
 #define MAX_INODE_NUM 100000
 #define INODE_SIZE sizeof(inode)
-
+#define INODE_RATE 1/100
+#define N_DBLOCKS 10
+#define N_IBLOCKS 4
 
 typedef struct superblock {
 	int size;
@@ -37,8 +43,8 @@ typedef struct superblock {
 typedef struct Inode {
 	int nlink;
 	int permission;
-	int type;
-	int parent;
+	int type; // tell you it is a file or directory
+	int parent; //
 	int next_inode;
 	int size;
 	int uid;
@@ -53,7 +59,8 @@ typedef struct Inode {
 //entry in open file table
 typedef struct file_entry {
 	int inode_entry;
-	int block_offset;
+	int block_index; // this is the data block we will go and retrieve data from. if we want to find the next block, we need to use block_offset to know the index of next data block
+	int block_offset; //the index of block in this file, not the whole disk
 	int byte_offset;
 } file_node;
 

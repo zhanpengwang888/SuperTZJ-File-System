@@ -1,7 +1,6 @@
 #ifndef TEST_UTIL_H
 #define TEST_UTIL_H
 
-#include <iostream>
 #include "../file_util.h"
 #define TRUE 1
 #define FALSE 0

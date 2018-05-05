@@ -8,6 +8,8 @@ int num_of_total_data_block;
 int num_of_total_inode;
 int disk;
 
+using namespace std;
+
 // update root in superblock, update inode, open root directory
 /*
 int f_mount(char* destination, char* diskname) {
@@ -62,9 +64,10 @@ int f_unmount(char* diskname) {
 }
 */
 
-int format_default_size(char* filename){
+int format_default_size(string filename){
 	int fd;
-	fd = open(filename, O_RDWR | O_TRUNC | O_CREAT);
+	//in open we need to convert to c-style string
+	fd = open(filename.c_str(), O_RDWR | O_TRUNC | O_CREAT);
 	if (fd == -1) {
 		return EXIT_FAILURE;
 	}
@@ -146,9 +149,9 @@ int format_default_size(char* filename){
 }
 
 
-int format_with_given_size(char* filename, long int file_size){
+int format_with_given_size(string filename, long int file_size){
 	int fd;
-	fd = open(filename, O_RDWR | O_TRUNC | O_CREAT);
+	fd = open(filename.c_str(), O_RDWR | O_TRUNC | O_CREAT);
 	if (fd == -1) {
 		return EXIT_FAILURE;
 	}
@@ -302,8 +305,25 @@ void rewind(int fd) {
 }
 */
 
+//dir functions
 
+struct dirent *f_opendir(char* path) {
+	//we can directly use f_open to do this
 
+}
+
+int f_open(const string restrict_path, const string restrict_mode) {
+	//we need to check mode here to avoid invalid mode
+	//how can we go into the disk to find the 
+	//parse the path to know the filename
+	//we can copy the inode region to memory! so search the inode region to see whether the file is in it
+	//if the file is in the disk...  we set up the open file table 
+	/*set up open file table：
+		1.find the index of this file in open file table -- return value
+		2.find inode index
+		3.find the first data block index
+		4.set the rest
+}
 
 
 

@@ -3,7 +3,7 @@
 
 using namespace std;
 int main() {
-	char* name = "test";
+	string name = "test";
 	format_default_size(name);
 	FILE* fp_r = fopen("test", "r");
 	char* buffer = (char*) malloc(DEFAULT_SIZE);
