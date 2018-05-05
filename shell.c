@@ -206,7 +206,7 @@ int main(int argc, char **argv)
 					return 0;
 				}
 			}
-			if (args_without_pipe != NULL && args_without_pipe[0] != NULL)
+			/*if (args_without_pipe != NULL && args_without_pipe[0] != NULL)
 			{
 				int ret;
 				if (strcmp(args_without_pipe[0], "cd") == 0 && args_without_pipe[1] == NULL)
@@ -222,7 +222,7 @@ int main(int argc, char **argv)
 					if (ret == -1)
 						perror("cd");
 				}
-			}
+			}*/
 			int field;
 			int status;
 			if (numArguments < 0)
