@@ -11,6 +11,11 @@
 //c++ lib
 #include <iostream>
 #include <string>
+#include <vector>
+#include <sstream>
+
+//for function return value
+#define FAIL -1
 
 //super block information
 #define BLOCK_SIZE 512

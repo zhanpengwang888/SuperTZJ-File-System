@@ -226,7 +226,7 @@ int format_with_given_size(string filename, long int file_size){
 
 	free(default_inode);
 	close(fd);
-	disk = fd;
+	disk = fd; //why we need to store it?
 	//need to replace by predefined
 	return 0;
 }
@@ -312,17 +312,68 @@ struct dirent *f_opendir(char* path) {
 
 }
 
+
+//http://ysonggit.github.io/coding/2014/12/16/split-a-string-using-c.html for split
+vector<string> split(const string &s, char delim) {
+    stringstream ss(s);
+    string item;
+    vector<string> tokens;
+    while (getline(ss, item, delim)) {
+    	if(item != "")
+        	tokens.push_back(item);
+    }
+    return tokens;
+}
+
+int add_to_file_table(int inode_num, inode f_node) {
+	//get the inode from inode region
+	int i;
+	for(i = 0; i < MAX_OPEN_FILE; i++) {
+		if(open_file_table[i].inode_entry == 0) {
+			open_file_table[i].inode_entry = inode_num;
+			open_file_table[i].block_index = f_node.dblocks[0];
+			open_file_table[i].block_offset = 0;
+			open_file_table[i].byte_offset = 0;
+			break;
+		}
+	}
+	return i;
+}
 int f_open(const string restrict_path, const string restrict_mode) {
 	//we need to check mode here to avoid invalid mode
-	//how can we go into the disk to find the 
+	if (restrict_mode != "r" && restrict_mode != "w" && restrict_mode != "a") {
+		cout << "The open mode is incorrect, please input \"r\" or \"w\" or \"a\"" << endl;
+		return FAIL;
+	}
 	//parse the path to know the filename
-	//we can copy the inode region to memory! so search the inode region to see whether the file is in it
-	//if the file is in the disk...  we set up the open file table 
+	vector<string> path_list = split(restrict_path,'/');
+	for(int i = 0; i < path_list.size() ; i++) {
+		cout << "This element is " << path_list[i] << endl;
+	}
+	//we can copy the inode region to memory! so search through the path to see whether the file is in the right position -- in mount
+	//zhanpeng is implementing function traverse_dir(int dir_node, string filename)
+	//first get the root directory inode index -- where we initialize all of these?
+	//how can we go into the disk to find the specific block if disk image is not on memory
+	int dir_node = sb->root;
+	for(int i = 0; i < path_list.size(); i++) {
+		dir_node = traverse_dir(dir_node,path_list[i]); //and need to consider permission problem
+		//not that simple need to consider restrict_mode
+		if(dir_node == -1) {
+			cout << "The file path is incorrect" << endl;
+			return FAIL;			
+		}
+	}
+	//if we get out of loop, it should get the target file's inode then we set up the open file table 
 	/*set up open file table：
 		1.find the index of this file in open file table -- return value
 		2.find inode index
 		3.find the first data block index
 		4.set the rest
+	*/
+	inode target = disk_inode_region[dir_node];
+	int result = add_to_file_table(dir_node, target);
+	//we also need to deal with open_file_table, have a function to add and remove element in open file table
+	return result;
 }
 
 
