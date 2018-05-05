@@ -1,3 +1,5 @@
+#ifndef FS_H
+#define FS_H
 #include "file_util.h"
 
 int f_mount(char* destination, char* diskname);
@@ -18,7 +20,7 @@ int f_mkdir(char* path, int mode);
 int f_rmdir(char* filepath);
 void rewind(int fd);
 
-
+#endif
 
 
 

@@ -1,18 +1,14 @@
 #ifndef TEST_UTIL_H
 #define TEST_UTIL_H
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <sys/stat.h> 
-#include <fcntl.h>
 #include <iostream>
 #include "../file_util.h"
 #define TRUE 1
 #define FALSE 0
-
-void print_inode(inode* inode, int index, int detail);
-inode* next_inode(inode* inode);
+//buffer should be the buffer stores the whole disk
+void print_inode_region(Superblock* sp, char* buffer);
+void print_inode(inode* Inode, int index, int detail);
+inode* next_inode(inode* Inode);
 void print_superblock(Superblock* sp);
+
 #endif

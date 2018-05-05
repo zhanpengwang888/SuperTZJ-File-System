@@ -1,2 +1,8 @@
-test_format: test_format.cpp ../file_util.h
-	g++ -o test_format test_format.cpp 
+# test_format: test_format.cpp test_util.h
+# 	g++ -o test_format test_format.cpp test_util.c
+test_format: test_format.cpp ../file_util.h test_util.h
+	g++ -o test_format test_format.cpp ../fs.cpp test_util.cpp
+
+SHELL:=/bin/bash -O extglob
+clean:
+	@rm -f !(*.c|*.cpp|makefile|README.txt|*.h)

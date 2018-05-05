@@ -63,14 +63,14 @@ typedef struct DirectoryEntry {
 	char file_name[28];
 } directory_entry;
 
-Superblock* sb; // super block
-file_node open_file_table[MAX_OPEN_FILE];
-inode disk_inode_region[MAX_INODE_NUM];
-int cur_directory;
-int num_of_total_data_block;
-int num_of_total_inode;
-int disk;
-
+extern Superblock* sb; // super block
+extern file_node open_file_table[MAX_OPEN_FILE];
+extern inode disk_inode_region[MAX_INODE_NUM];
+extern int cur_directory;
+extern int num_of_total_data_block;
+extern int num_of_total_inode;
+extern int disk;
+#endif
 
 
 
@@ -101,16 +101,7 @@ int disk;
 
 
 
-
-
-
-
-
-
-
-
-
-#endif
+ 
 
 
 
