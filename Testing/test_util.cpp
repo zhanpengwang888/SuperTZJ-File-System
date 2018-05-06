@@ -9,7 +9,7 @@ void print_inode(inode* Inode,int index, int detail){
   else {
     strcpy(status,"USED");
   }
-  printf("Inode %d is %s, the file size is %d\n",index, status, Inode->size);
+  printf("Inode %d is %s, the file size is %ld\n",index, status, Inode->size);
     if(detail) {        
         printf("Direct blocks: {");
         for(int i = 0; i < N_DBLOCKS; i++) {

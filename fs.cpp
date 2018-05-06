@@ -6,9 +6,13 @@ inode *disk_inode_region[MAX_INODE_NUM];
 int cur_directory;
 int num_of_total_data_block;
 int num_of_total_inode;
+int num_of_open_file;
 int disk;
 
 using namespace std;
+
+//temporary prototypes -- need to combine in one util.c file
+int create_file(const string filename, int parent_inode, int type);
 
 // update root in superblock, update inode, open root directory
 /*
@@ -326,7 +330,181 @@ void rewind(int fd) {
 }
 */
 
+//update the superblock and write in disk image
+void update_sb() {
+	lseek(disk,BOOT_SIZE,SEEK_SET);
+	write(disk,sb,sizeof(Superblock));
+}
+//get the index of block, read corresponding data block in disk image and free them,
+void clean_block(int index) {
+	size_t data_start = BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE;
+  	size_t data_address = data_start + index*BLOCK_SIZE;
+  	//get the data block
+  	char* data_buffer = (char*) malloc(sizeof(char) * BLOCK_SIZE);
+  	if(lseek(disk, data_address,SEEK_SET) < 0) {
+  		cout << "There is something wrong in lseek of clean block" << endl;
+  		return;
+  	}
+  	read(disk,data_buffer,BLOCK_SIZE);
+  	//clean the data in it
+  	bzero(data_buffer, BLOCK_SIZE);
+  	int* free_block = (int*) data_buffer;
+  	//write back to disk
+  	if(lseek(disk, data_address,SEEK_SET) < 0){
+  		cout << "There is something wrong in lseek of clean block" << endl;
+		return;
+	}
+	write(disk,free_block,BLOCK_SIZE);
+  	//set the next free block to be the current head of free block list in superblock
+  	free_block[0] = sb->free_block;
+  	//update superblock's free block element
+  	sb->free_block = index;
+  	//do we need to update superblock in the disk? ----- NOT DONE YET !!!!!!!!
+  	free(data_buffer);
+}
+
+//get the specific block index from the indirect block
+int get_index(int indirect_idx, int offset) {
+  //data start might be stored somewhere if necessary
+  size_t data_start = BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE;
+  size_t data_address = data_start + indirect_idx*BLOCK_SIZE;
+  //create buffer to index_table of indirect block
+  char* index_buffer = (char*) malloc(sizeof(char) * BLOCK_SIZE);
+  //lseek to specific position of the disk image and read from it -- make sure disk is valid
+  if(lseek(disk, data_address,SEEK_SET) < 0)
+  	return FAIL;
+  //read from the file descriptor
+  read(disk,index_buffer,BLOCK_SIZE);
+  int* index_table = (int*)(index_buffer); //here we need to read from disk image
+  free(index_buffer);
+  return index_table[offset];
+}
 //dir functions
+void clean_file(inode* f_node) {
+	//first we need to go to each data block and link to the free block list
+	//consecutively update the free block in superblock
+	//we need to set up a system that keep track of 
+	int remain = f_node->size;
+  	int num_indir_idx = BLOCK_SIZE / sizeof(int);
+  //arrange the direct blocks
+  printf("******************Cleaning direct blocks*******************\n");
+  for(int i = 0; i < N_DBLOCKS ; i++) {
+    clean_block(f_node->dblocks[i]);
+    remain = remain - BLOCK_SIZE;
+    if(remain <= 0)
+      return;
+  }
+
+  //arrange indirect blocks
+  //arrange first level indirect blocks
+  printf("*********************clearing indirect blocks************************\n");
+  for(int i = 0; i < N_IBLOCKS; i++) {
+    // int index_arr[num_indir_idx];
+    // bzero(index_arr,sizeof(index_arr));
+    for(int j = 0; j < num_indir_idx ;j++) {
+      //get the index of the data block we want
+      int b_index = get_index(f_node->iblocks[i],j);
+      if(b_index <= 0) {
+		printf("Abnormal event, get access to invalid index block!\n");
+		clean_block(f_node->iblocks[i]);
+		return;
+      }
+      else {
+		clean_block(b_index);
+		remain = remain - BLOCK_SIZE;
+		if(remain <= 0) {
+			//we need to clean the current idirect block when we leave
+			clean_block(f_node->iblocks[i]);
+			return;
+		}
+      }
+    }
+    //also we need to clean the indirect block itself.
+    clean_block(f_node->iblocks[i]);
+  }
+
+  //clean second level indirect block
+  for(int i = 0; i < num_indir_idx; i++) {
+    //get the block index of first level indirect block
+    int f_index = get_index(f_node->i2block,i);
+    if(f_index <0) {
+      printf("Abnormal event, get access to invalid first level indirect block!\n");
+      clean_block(f_node->i2block);
+      return;
+    }
+    //array to store data block
+    for(int j = 0; j < num_indir_idx ;j++) {
+      //get the index of the data block we want
+      int b_index = get_index(f_index,j);
+      if(b_index <0) {
+        printf("Abnormal event, get access to invalid index block!\n");
+        clean_block(f_node->i2block);
+        clean_block(f_index);
+		return;
+	  }
+      else {
+        clean_block(b_index);
+        remain = remain - BLOCK_SIZE;
+        if(remain <= 0) {
+	      	clean_block(f_node->i2block);
+	        clean_block(f_index);
+	        return;
+        }
+      }
+    }
+    clean_block(f_index);
+  }
+  clean_block(f_node->i2block);
+
+  //arrange triple level indirect block
+  for(int k = 0; k < num_indir_idx; k++) {
+    int s_index = get_index(f_node->i3block,k);
+    if(s_index < 0) {
+      printf("Abnormal event, get access to invalid second level indirect block!\n");
+      clean_block(f_node->i3block);
+      return;
+    }
+    for(int i = 0; i < num_indir_idx; i++) {
+      //get the block index of first level indirect block
+      int f_index = get_index(s_index,i);
+      if(f_index < 0 ) {
+		printf("Abnormal event, get access to invalid first level indirect block!\n");
+		clean_block(s_index); //second level indirect block
+		clean_block(f_node->i3block);
+		return;
+	      }
+      //array to store data block
+      int index_arr[num_indir_idx];
+      bzero(index_arr,sizeof(index_arr));
+      for(int j = 0; j < num_indir_idx ;j++) {
+		//get the index of the data block we want
+		int b_index = get_index(f_index,j);
+		if(b_index < 0) {
+		  printf("Abnormal event, get access to invalid index block!\n");
+		  clean_block(f_index);
+		  clean_block(s_index);
+		  clean_block(f_node->i3block);
+		  return;
+		}
+		else {
+		  clean_block(b_index);
+		  remain = remain - BLOCK_SIZE;
+		  if(remain <= 0) {
+			clean_block(f_index);
+			clean_block(s_index);
+			clean_block(f_node->i3block);
+		  	return;
+		  }
+		}
+      }
+      clean_block(f_index);
+    }
+    clean_block(s_index);
+  }
+  clean_block(f_node->i3block);
+}
+
+
 
 struct dirent *f_opendir(char *path)
 {
@@ -627,8 +805,12 @@ int f_open(const string restrict_path, const string restrict_mode)
 	int result = add_to_file_table(dir_node, target);
 	//we also need to deal with open_file_table, have a function to add and remove element in open file table
 
-	// if we open a existed file with "w", we need to update its inode information
+	// if we open a existed file with "w", we need to update its inode information -- one problem, if not change correspond data blocks, those data blocks will be lost
 	if (restrict_mode == "w") {
+		//first deal with data blocks
+		clean_file(target);
+		//then update the superblock in disk image
+		update_sb();
 		disk_inode_region[dir_node]->size = 0;
 		for (int i = 0; i < N_DBLOCKS; i++) {
 			(disk_inode_region[dir_node]->dblocks)[i] = -1;
@@ -638,7 +820,7 @@ int f_open(const string restrict_path, const string restrict_mode)
 		}
 		disk_inode_region[dir_node]->i2block = -1;
 		disk_inode_region[dir_node]->i3block = -1;
-		// write it to disks
+		// write the change of inode to disks
 		lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->inode_offset * BLOCK_SIZE + dir_node * sizeof(inode), SEEK_SET);
 		write(disk, disk_inode_region[dir_node], sizeof(inode));
 	}
