@@ -593,3 +593,133 @@ int f_open(const string restrict_path, const string restrict_mode)
 	//we also need to deal with open_file_table, have a function to add and remove element in open file table
 	return result;
 }
+
+int create_file (const string filename, int parent_inode, int type) {
+	if (num_of_open_file > MAX_OPEN_FILE) {
+		return EXIT_FAILURE;
+	}
+
+	unsigned long parent_size = disk_inode_region[parent_inode]->size;
+	unsigned long num_of_file_in_directory = parent_size / sizeof(directory_entry);
+	unsigned long data_block_index = (parent_size - 1) / BLOCK_SIZE; // avoide cases when parent_size is 512*n bytes
+	unsigned long data_block_offset = parent_size % BLOCK_SIZE;
+	int cur_free_inode = sb->free_inode;
+	int next_free_inode = disk_inode_region[cur_free_inode]->next_inode;
+	int file_descriptor = -1;
+	inode* parent = disk_inode_region[parent_inode];
+
+	// update inode info in memory
+	disk_inode_region[cur_free_inode]->nlink = 1;
+	disk_inode_region[cur_free_inode]->permission = 7;
+	disk_inode_region[cur_free_inode]->type = type;
+	disk_inode_region[cur_free_inode]->parent = parent_inode;
+	disk_inode_region[cur_free_inode]->size = 0;
+	strcpy(disk_inode_region[cur_free_inode]->file_name, filename);
+
+	// write inode back to disk
+	lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->inode_offset * BLOCK_SIZE + cur_free_inode * sizeof(inode), SEEK_SET);
+	write(disk, disk_inode_region[cur_free_inode], sizeof(inode));
+
+	// put the file into open file table
+	for (int i = 0; i < MAX_OPEN_FILE; i++) {
+		if (open_file_table[i] == -1) {
+			open_file_table[i]->inode_entry = cur_free_inode;
+		}
+	}
+
+	// update the data block of parent node
+	directory_entry* to_update = (directory_entry*) malloc(sizeof(directory_entry));
+	to_update->inode_entry = cur_free_inode;
+	strcpy(to_update->inode_entry, filename);
+	int block_to_write = -1;
+	if (data_block_index < N_DBLOCKS) {
+		block_to_write = parent->dblocks[data_block_index];
+	}
+	else if (data_block_index < N_DBLOCKS + NUM_INODE_IN_BLOCK * N_IBLOCKS) {
+		data_block_index -= N_DBLOCKS;
+		int i1block_index = (data_block_index - 1) / NUM_INODE_IN_BLOCK;
+		int i1block_offset = (data_block_index - 1) % NUM_INODE_IN_BLOCK;
+		void* i1block_buffer = malloc(BLOCK_SIZE);
+		lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + parent->iblocks[i1block_index] * BLOCK_SIZE, SEEK_SET);
+		fread(i1block_buffer, 1, BLOCK_SIZE, disk);
+		int* inode_i1bloc = NULL;
+		inode_i1bloc = (int*) (i1block_buffer);
+		block_to_write = inode_i1bloc[i1block_offset];
+		free(i1block_buffer);
+	}
+	else if (data_block_index < N_DBLOCKS + NUM_INODE_IN_BLOCK * N_IBLOCKS + NUM_INODE_IN_BLOCK * NUM_INODE_IN_BLOCK) {
+		data_block_index = data_block_index - N_DBLOCKS - NUM_INODE_IN_BLOCK * N_IBLOCKS;
+		// calculate which i1block to read (index in the data block of i2block)
+		int i2block_offset = (data_block_index - 1) / NUM_INODE_IN_BLOCK;
+		void* i2block_buffer = malloc(BLOCK_SIZE);
+		// read data block of i2block
+		lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + parent->i2block * BLOCK_SIZE, SEEK_SET);
+		fread(i2block_buffer, 1, BLOCK_SIZE, disk);
+		int* i2block_inode = (int*) i2block_buffer;
+		// calculate index and offset in the given i1block
+		int i1block_index = i2block_inode[i2block_offset];
+		int i1block_offset = (data_block_index - 1) % NUM_INODE_IN_BLOCK;
+		
+		void* i1block_buffer = malloc(BLOCK_SIZE);
+		// read data block from i1block
+		lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + i1block_index * BLOCK_SIZE, SEEK_SET);
+		fread(i1block_buffer, 1, BLOCK_SIZE, disk);
+		int* inode_i1bloc = NULL;
+		inode_i1bloc = (int*) (i1block_buffer);
+		block_to_write = inode_i1bloc[i1block_offset];
+
+		free(i2block_buffer);
+		free(i1block_buffer);
+	}
+	else if (data_block_index < N_DBLOCKS + NUM_INODE_IN_BLOCK * N_IBLOCKS + NUM_INODE_IN_BLOCK * NUM_INODE_IN_BLOCK + NUM_INODE_IN_BLOCK * NUM_INODE_IN_BLOCK * NUM_INODE_IN_BLOCK) {
+		data_block_index = data_block_index - N_DBLOCKS - NUM_INODE_IN_BLOCK * N_IBLOCKS - NUM_INODE_IN_BLOCK * NUM_INODE_IN_BLOCK;
+		// calculate which i2block we will step into
+		int i3block_offset = (data_block_index - 1) / (NUM_INODE_IN_BLOCK * NUM_INODE_IN_BLOCK);
+		// read the data block of i3block
+		void* i3block_buffer = malloc(BLOCK_SIZE);
+		lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + parent->i3block * BLOCK_SIZE, SEEK_SET);
+		fread(i3block_buffer, 1, BLOCK_SIZE, disk);
+		int* i3block_inode = (int*) i3block_buffer;
+
+		// calculate which i1block we will step into
+		int i2block_index = i3block_inode[i3block_offset];
+		int i2block_offset = (data_block_index - 1) % (NUM_INODE_IN_BLOCK * NUM_INODE_IN_BLOCK);
+		i2block_offset = i2block_offset / NUM_INODE_IN_BLOCK;
+
+		// read the data block of i2block
+		void* i2block_buffer = malloc(BLOCK_SIZE);
+		lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + parent->i2block_index * BLOCK_SIZE, SEEK_SET);
+		fread(i2block_buffer, 1, BLOCK_SIZE, disk);
+		int* i2block_inode = (int*) i2block_buffer;
+
+		// calculate which data block of i1block we will step into
+		int i1block_index = i2block_inode[i2block_offset];
+		int i1block_offset = (data_block_index - 1) % NUM_INODE_IN_BLOCK;
+		
+		void* i1block_buffer = malloc(BLOCK_SIZE);
+		// read data block from i1block
+		lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + i1block_index * BLOCK_SIZE, SEEK_SET);
+		fread(i1block_buffer, 1, BLOCK_SIZE, disk);
+		int* inode_i1bloc = NULL;
+		inode_i1bloc = (int*) (i1block_buffer);
+		block_to_write = inode_i1bloc[i1block_offset];
+
+		free(i3block_buffer);
+		free(i2block_buffer);
+		free(i1block_buffer);		
+	}
+	else {
+		return EXIT_FAILURE;
+	}
+
+	directory_entry* new_directory_entry = (directory_entry*) malloc(directory_entry);
+	new_directory_entry->inode_entry = cur_free_inode;
+	strcpy(new_directory_entry->file_name, filename);
+	// write new directory entry to given position in the data block
+	lseek(fd, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + block_to_write * BLOCK_SIZE + data_block_offset, SEEK_SET);
+	write(fd, new_directory_entry, sizeof(directory_entry));
+	free(new_directory_entry);
+
+
+}
+
