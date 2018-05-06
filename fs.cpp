@@ -834,17 +834,47 @@ int f_open(const string restrict_path, const string restrict_mode)
 }
 
 // f_close needs to take of closing a normal file or a directory (maybe).
+// Not tested yet. Maybe buggy!!!!!!!!
 int f_close(int fd)
 {
-	// need to check if the corresponding file is open or not. NOT DONE YET!!!!!!!!!!!
+	// Check if it is a valid file descriptor. Then, checking if the file is open or not.
+	file_node *target_file = open_file_table[fd]; // get the file
+	if (fd > MAX_OPEN_FILE) {
+		printf("Invalid file descriptor.\n");
+		return FAIL;
+	} else if (target_file->inode_entry == -1) {
+		printf("This file has not been opened.\n");
+		return FAIL;
+	}
+	int inode_index = target_file->inode_entry; // get the inode index
+	inode* file_inode = disk_inode_region[inode_index]; // get the inode with the inode index
+	// if the file is a directory file
+	if (file_inode->type == DIRECTORY_FILE) {
+		f_closedir(fd); // invoke f_closedir to close the directory
+		return SUCCESS;
+	}
+	// if the file is a normal file
+	target_file->inode_entry = -1; // change the inode entry to -1
+	target_file->block_index = 0; // reset it back to 0.
+	target_file->block_offset = 0;
+	target_file->mode = 0;
+	open_file_table[fd] = target_file; // put the modified file node back into the open file table.
+	return SUCCESS;
 }
 
 // f_stat: get the information about the file given a file descriptor
-// it also needs to take care of both file and directory
+// it seems to take care of both the normal file and the directory file. Not Tested yet. Maybe Buggy!!!!
 int f_stat(int fd, struct fileStat *info)
 {
-	// need to check if the fd is open or not. NOT DONE YET!!!!!!!!!!!!!!!!!
+	// Check if it is a valid file descriptor. Then, checking if the file is open or not.
 	file_node *target_file = open_file_table[fd]; // get the file
+	if (fd > MAX_OPEN_FILE) {
+		printf("Invalid file descriptor.\n");
+		return FAIL;
+	} else if (target_file->inode_entry == -1) {
+		printf("This file has not been opened.\n");
+		return FAIL;
+	}
 	int inode_index = target_file->inode_entry;
 	inode *target_file_inode = disk_inode_region[inode_index]; // get the corresponidng inode for the file
 	// update the info
