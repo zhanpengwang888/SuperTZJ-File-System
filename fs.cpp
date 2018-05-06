@@ -368,7 +368,7 @@ int add_to_file_table(int inode_num, inode *f_node)
 // disk_buffer needs to be changed... I need the disk image to be in a buffer to get its data region.
 // use read and lseek
 // Maybe buggy...... Needs to be tested.
-int traverse_dir(int dirinode_index, string filename)
+int traverse_dir(int dirinode_index, string filename, bool isLast)
 {
 	//bool IsExist = false;
 	//size_t size_of_disk = 6666666666;				  // IT MUST BE CHANGED LATER.
@@ -381,7 +381,7 @@ int traverse_dir(int dirinode_index, string filename)
 		return FAIL;
 	}
 	// then, check if the given inode is a directory inode or not
-	if (direct->type != DIRECTORY_FILE)
+	if (!isLast && direct->type != DIRECTORY_FILE)
 	{
 		printf("This is not a directory.\n");
 		return FAIL;
@@ -571,10 +571,13 @@ int f_open(const string restrict_path, const string restrict_mode)
 	//first get the root directory inode index -- where we initialize all of these?
 	//how can we go into the disk to find the specific block if disk image is not on memory
 	int dir_node = sb->root;
+	bool isLast = false;
 	for (int i = 0; i < path_list.size(); i++)
 	{
-		dir_node = traverse_dir(dir_node, path_list[i]); //and need to consider permission problem
+		dir_node = traverse_dir(dir_node, path_list[i], isLast); //and need to consider permission problem
 		//not that simple need to consider restrict_mode
+		if (i == path_list.size() -1 )
+			isLast = true;
 		if (dir_node == -1)
 		{
 			cout << "The file path is incorrect" << endl;
