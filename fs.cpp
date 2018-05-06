@@ -1168,7 +1168,7 @@ int create_file(const string filename, int parent_inode, int type)
 	to_update->inode_entry = cur_free_inode;
 	std::strcpy(to_update->file_name, filename.c_str());
 	int block_to_write = -1;
-	if (data_block_index < N_DBLOCKS)
+	if (data_block_index < N_DBLOCKS and parent_size < BLOCK_SIZE * N_DBLOCKS)
 	{
 		// need new data block and update corresponding inode
 		if (data_block_offset == 0) {
@@ -1184,9 +1184,12 @@ int create_file(const string filename, int parent_inode, int type)
 			block_to_write = parent->dblocks[data_block_index];
 		}
 	}
-	else if (data_block_index < N_DBLOCKS + NUM_INODE_IN_BLOCK * N_IBLOCKS)
+	else if (data_block_index < N_DBLOCKS + NUM_INODE_IN_BLOCK * N_IBLOCKS and parent_size < BLOCK_SIZE * (N_DBLOCKS + N_IBLOCKS * NUM_INODE_IN_BLOCK))
 	{
 		data_block_index -= N_DBLOCKS;
+		if (data_block_index < 0) {
+			data_block_index = 0;
+		}
 		int i1block_index = (data_block_index - 1) / NUM_INODE_IN_BLOCK;
 		int i1block_offset = (data_block_index - 1) % NUM_INODE_IN_BLOCK;
 		// if we need a new data block
@@ -1234,9 +1237,12 @@ int create_file(const string filename, int parent_inode, int type)
 			std::free(i1block_buffer);
 		}
 	}
-	else if (data_block_index < N_DBLOCKS + NUM_INODE_IN_BLOCK * N_IBLOCKS + NUM_INODE_IN_BLOCK * NUM_INODE_IN_BLOCK)
+	else if (data_block_index < N_DBLOCKS + NUM_INODE_IN_BLOCK * N_IBLOCKS + NUM_INODE_IN_BLOCK * NUM_INODE_IN_BLOCK  and parent_size < BLOCK_SIZE * (N_DBLOCKS + NUM_INODE_IN_BLOCK * N_IBLOCKS + NUM_INODE_IN_BLOCK * NUM_INODE_IN_BLOCK))
 	{
 		data_block_index = data_block_index - N_DBLOCKS - NUM_INODE_IN_BLOCK * N_IBLOCKS;
+		if (data_block_index < 0) {
+			data_block_index = 0;
+		}
 		// calculate which i1block to read (index in the data block of i2block)
 		int i2block_offset = (data_block_index - 1) / NUM_INODE_IN_BLOCK;
 		void *i2block_buffer = malloc(BLOCK_SIZE);
@@ -1298,6 +1304,9 @@ int create_file(const string filename, int parent_inode, int type)
 	else if (data_block_index < N_DBLOCKS + NUM_INODE_IN_BLOCK * N_IBLOCKS + NUM_INODE_IN_BLOCK * NUM_INODE_IN_BLOCK + NUM_INODE_IN_BLOCK * NUM_INODE_IN_BLOCK * NUM_INODE_IN_BLOCK)
 	{
 		data_block_index = data_block_index - N_DBLOCKS - NUM_INODE_IN_BLOCK * N_IBLOCKS - NUM_INODE_IN_BLOCK * NUM_INODE_IN_BLOCK;
+		if (data_block_index < 0) {
+			data_block_index = 0;
+		}		
 		// calculate which i2block we will step into
 		int i3block_offset = (data_block_index - 1) / (NUM_INODE_IN_BLOCK * NUM_INODE_IN_BLOCK);
 		// read the data block of i3block
