@@ -566,22 +566,54 @@ int f_open(const string restrict_path, const string restrict_mode)
 	{
 		cout << "This element is " << path_list[i] << endl;
 	}
+
+
 	//we can copy the inode region to memory! so search through the path to see whether the file is in the right position -- in mount
 	//zhanpeng is implementing function traverse_dir(int dir_node, string filename)
 	//first get the root directory inode index -- where we initialize all of these?
 	//how can we go into the disk to find the specific block if disk image is not on memory
 	int dir_node = sb->root;
+	int temp = -1;
 	bool isLast = false;
-	for (int i = 0; i < path_list.size(); i++)
+	int counter = 0;
+	for (counter = 0; counter < path_list.size(); counter++)
 	{
-		dir_node = traverse_dir(dir_node, path_list[i], isLast); //and need to consider permission problem
-		//not that simple need to consider restrict_mode
-		if (i == path_list.size() -1 )
+		// to see if it is the last thing we need to find
+		if (counter == path_list.size() - 1) {
 			isLast = true;
+		}
+		temp = dir_node;
+		dir_node = traverse_dir(dir_node, path_list[counter], isLast); //and need to consider permission problem
+		//not that simple need to consider restrict_mode
 		if (dir_node == -1)
 		{
 			cout << "The file path is incorrect" << endl;
-			return FAIL;
+			// return FAIL;
+			break;
+		}
+	}
+
+	if (dir_node == -1) {
+		if (counter != path_list.size() - 1) {
+			return EXIT_FAILURE;
+		}
+		else if (restrict_mode == "a" || restrict_mode == "w") {
+			dir_node = create_file(path_list[counter], temp, NORMAL_FILE); // when mode is "w" or "a", create a file if the file doesn't exist
+			for (int k = 0; k < MAX_OPEN_FILE; k++) {
+				if (open_file_table[k]->inode_entry == dir_node) {
+					return k;
+				}
+			}
+		}
+		else {
+			return EXIT_FAILURE;
+		}
+	}
+	else {
+		for (int k = 0; k < MAX_OPEN_FILE; k++) {
+			if (open_file_table[k]->inode_entry == dir_node) {
+				return EXIT_FAILURE;  // file has already been opened
+			}
 		}
 	}
 	//if we get out of loop, it should get the target file's inode then we set up the open file table
@@ -594,6 +626,28 @@ int f_open(const string restrict_path, const string restrict_mode)
 	inode *target = disk_inode_region[dir_node];
 	int result = add_to_file_table(dir_node, target);
 	//we also need to deal with open_file_table, have a function to add and remove element in open file table
+
+	// if we open a existed file with "w", we need to update its inode information
+	if (restrict_mode == "w") {
+		disk_inode_region[dir_node]->size = 0;
+		for (int i = 0; i < N_DBLOCKS; i++) {
+			(disk_inode_region[dir_node]->dblocks)[i] = -1;
+		}
+		for (int i = 0; i < N_IBLOCKS; i++) {
+			(disk_inode_region[dir_node]->iblocks)[i] = -1;
+		}
+		disk_inode_region[dir_node]->i2block = -1;
+		disk_inode_region[dir_node]->i3block = -1;
+		// write it to disks
+		lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->inode_offset * BLOCK_SIZE + dir_node * sizeof(inode), SEEK_SET);
+		write(disk, disk_inode_region[dir_node], sizeof(inode));
+	}
+	else {
+		/*  We need to update the file indicator in the open file table for mode "a" if the file exists */
+	}
+
+
+
 	return result;
 }
 
@@ -752,4 +806,5 @@ int create_file(const string filename, int parent_inode, int type)
 	lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + block_to_write * BLOCK_SIZE + data_block_offset, SEEK_SET);
 	write(disk, to_update, sizeof(directory_entry));
 	std::free(to_update);
+	return cur_free_inode;
 }
