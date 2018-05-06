@@ -36,6 +36,9 @@
 #define N_DBLOCKS 10
 #define N_IBLOCKS 4
 #define NUM_INODE_IN_BLOCK BLOCK_SIZE / sizeof(inode)
+#define EXEONLY 1
+#define WRONLY 2
+#define RDONLY 4
 
 typedef struct superblock {
 	int size;
@@ -69,6 +72,7 @@ typedef struct file_entry {
 	int block_index; // this is the data block we will go and retrieve data from. if we want to find the next block, we need to use block_offset to know the index of next data block
 	int block_offset; //the index of block in this file, not the whole disk
 	int byte_offset;
+	int mode;
 } file_node;
 
 // the whole directory_entry struct is thus 4 + 28 = 32 bytes, and in other words, a block can hold 16 directory entries.
