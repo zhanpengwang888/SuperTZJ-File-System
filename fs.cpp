@@ -1,8 +1,8 @@
 #include "fs.h"
 
 Superblock *sb; // super block
-file_node* open_file_table[MAX_OPEN_FILE];
-inode* disk_inode_region[MAX_INODE_NUM];
+file_node *open_file_table[MAX_OPEN_FILE];
+inode *disk_inode_region[MAX_INODE_NUM];
 int cur_directory;
 int num_of_total_data_block;
 int num_of_total_inode;
@@ -81,7 +81,7 @@ int format_default_size(string filename)
 	{
 		return EXIT_FAILURE;
 	}
-	free(bootblock);
+	std::free(bootblock);
 	sb = (Superblock *)malloc(sizeof(Superblock));
 	sb->size = BLOCK_SIZE;
 	sb->inode_offset = 0;
@@ -132,7 +132,7 @@ int format_default_size(string filename)
 	default_inode->i3block = 0;
 	//can't directly assign, use strcpy
 	//default_inode->file_name = "";
-	strcpy(default_inode->file_name, "");
+	std::strcpy(default_inode->file_name, "");
 	//default_inode->padding = 0;
 
 	num_of_total_inode = (sb->data_offset - sb->inode_offset) * BOOT_SIZE / sizeof(inode);
@@ -153,7 +153,7 @@ int format_default_size(string filename)
 		}
 	}
 
-	free(default_inode);
+	std::free(default_inode);
 	close(fd);
 	//need to replace by predefined
 	return 0;
@@ -175,7 +175,7 @@ int format_with_given_size(string filename, long int file_size)
 	{
 		return EXIT_FAILURE;
 	}
-	free(bootblock);
+	std::free(bootblock);
 	sb = (Superblock *)malloc(sizeof(Superblock));
 	sb->size = BLOCK_SIZE;
 	sb->inode_offset = 0;
@@ -224,7 +224,7 @@ int format_with_given_size(string filename, long int file_size)
 	default_inode->i2block = 0;
 	default_inode->i3block = 0;
 	//default_inode->file_name = "";
-	strcpy(default_inode->file_name, "");
+	std::strcpy(default_inode->file_name, "");
 	//default_inode->padding = 0;
 
 	num_of_total_inode = (sb->data_offset - sb->inode_offset) * BOOT_SIZE / sizeof(inode);
@@ -245,7 +245,7 @@ int format_with_given_size(string filename, long int file_size)
 		}
 	}
 
-	free(default_inode);
+	std::free(default_inode);
 	close(fd);
 	disk = fd; //why we need to store it?
 	//need to replace by predefined
@@ -347,7 +347,7 @@ vector<string> split(const string &s, char delim)
 	return tokens;
 }
 
-int add_to_file_table(int inode_num, inode f_node)
+int add_to_file_table(int inode_num, inode *f_node)
 {
 	//get the inode from inode region
 	int i;
@@ -356,7 +356,7 @@ int add_to_file_table(int inode_num, inode f_node)
 		if (open_file_table[i]->inode_entry == -1)
 		{
 			open_file_table[i]->inode_entry = inode_num;
-			open_file_table[i]->block_index = f_node.dblocks[0];
+			open_file_table[i]->block_index = f_node->dblocks[0];
 			open_file_table[i]->block_offset = 0;
 			open_file_table[i]->byte_offset = 0;
 			break;
@@ -374,7 +374,7 @@ int traverse_dir(int dirinode_index, string filename)
 	//size_t size_of_disk = 6666666666;				  // IT MUST BE CHANGED LATER.
 	//char *disk_buffer = (char *)malloc(size_of_disk); // IMPORTANT: hard coded buffer that contains the disk image data!!!, This needs to be changed later.
 	// first, check if the given inode has an entry in the disk inode region (i.e., Check if the directory exists or not)
-	inode* direct = disk_inode_region[dirinode_index]; // get the directory
+	inode *direct = disk_inode_region[dirinode_index]; // get the directory
 	if (direct->nlink == 0)
 	{
 		printf("This directory does not exist.\n");
@@ -389,7 +389,7 @@ int traverse_dir(int dirinode_index, string filename)
 	// now lets check the data region to check if the given filename exists or not
 	// first, look into the direct data blocks
 	size_t remaining_size = direct->size; // get the size of the directory, and says it is the remaining size.
-	int data_offset = sb->data_offset;   // get the data offset from the super block
+	int data_offset = sb->data_offset;	// get the data offset from the super block
 	size_t data_region_starting_addr = BOOT_SIZE + SUPER_SIZE + data_offset * BLOCK_SIZE;
 	for (int i = 0; i < N_DBLOCKS; i++)
 	{
@@ -588,24 +588,26 @@ int f_open(const string restrict_path, const string restrict_mode)
 		3.find the first data block index
 		4.set the rest
 	*/
-	inode target = disk_inode_region[dir_node];
+	inode *target = disk_inode_region[dir_node];
 	int result = add_to_file_table(dir_node, target);
 	//we also need to deal with open_file_table, have a function to add and remove element in open file table
 	return result;
 }
 
 // f_close needs to take of closing a normal file or a directory (maybe).
-int f_close(int fd) {
+int f_close(int fd)
+{
 	// need to check if the corresponding file is open or not. NOT DONE YET!!!!!!!!!!!
 }
 
 // f_stat: get the information about the file given a file descriptor
 // it also needs to take care of both file and directory
-int f_stat(int fd, struct fileStat *info) {
+int f_stat(int fd, struct fileStat *info)
+{
 	// need to check if the fd is open or not. NOT DONE YET!!!!!!!!!!!!!!!!!
-	file_node* target_file = open_file_table[fd]; // get the file
+	file_node *target_file = open_file_table[fd]; // get the file
 	int inode_index = target_file->inode_entry;
-	inode* target_file_inode = disk_inode_region[inode_index]; // get the corresponidng inode for the file
+	inode *target_file_inode = disk_inode_region[inode_index]; // get the corresponidng inode for the file
 	// update the info
 	info->inode_index = inode_index;
 	info->filesize = target_file_inode->size;
@@ -616,8 +618,10 @@ int f_stat(int fd, struct fileStat *info) {
 	return SUCCESS;
 }
 
-int create_file (const string filename, int parent_inode, int type) {
-	if (num_of_open_file > MAX_OPEN_FILE) {
+int create_file(const string filename, int parent_inode, int type)
+{
+	if (num_of_open_file > MAX_OPEN_FILE)
+	{
 		return EXIT_FAILURE;
 	}
 
@@ -628,7 +632,7 @@ int create_file (const string filename, int parent_inode, int type) {
 	int cur_free_inode = sb->free_inode;
 	int next_free_inode = disk_inode_region[cur_free_inode]->next_inode;
 	int file_descriptor = -1;
-	inode* parent = disk_inode_region[parent_inode];
+	inode *parent = disk_inode_region[parent_inode];
 
 	// update inode info in memory
 	disk_inode_region[cur_free_inode]->nlink = 1;
@@ -636,72 +640,78 @@ int create_file (const string filename, int parent_inode, int type) {
 	disk_inode_region[cur_free_inode]->type = type;
 	disk_inode_region[cur_free_inode]->parent = parent_inode;
 	disk_inode_region[cur_free_inode]->size = 0;
-	strcpy(disk_inode_region[cur_free_inode]->file_name, filename);
+	std::strcpy(disk_inode_region[cur_free_inode]->file_name, filename.c_str());
 
 	// write inode back to disk
 	lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->inode_offset * BLOCK_SIZE + cur_free_inode * sizeof(inode), SEEK_SET);
 	write(disk, disk_inode_region[cur_free_inode], sizeof(inode));
 
 	// put the file into open file table
-	for (int i = 0; i < MAX_OPEN_FILE; i++) {
-		if (open_file_table[i] == -1) {
+	for (int i = 0; i < MAX_OPEN_FILE; i++)
+	{
+		if (open_file_table[i]->inode_entry == -1)
+		{
 			open_file_table[i]->inode_entry = cur_free_inode;
 		}
 	}
 
 	// update the data block of parent node
-	directory_entry* to_update = (directory_entry*) malloc(sizeof(directory_entry));
+	directory_entry *to_update = (directory_entry *)malloc(sizeof(directory_entry));
 	to_update->inode_entry = cur_free_inode;
-	strcpy(to_update->inode_entry, filename);
+	std::strcpy(to_update->file_name, filename.c_str());
 	int block_to_write = -1;
-	if (data_block_index < N_DBLOCKS) {
+	if (data_block_index < N_DBLOCKS)
+	{
 		block_to_write = parent->dblocks[data_block_index];
 	}
-	else if (data_block_index < N_DBLOCKS + NUM_INODE_IN_BLOCK * N_IBLOCKS) {
+	else if (data_block_index < N_DBLOCKS + NUM_INODE_IN_BLOCK * N_IBLOCKS)
+	{
 		data_block_index -= N_DBLOCKS;
 		int i1block_index = (data_block_index - 1) / NUM_INODE_IN_BLOCK;
 		int i1block_offset = (data_block_index - 1) % NUM_INODE_IN_BLOCK;
-		void* i1block_buffer = malloc(BLOCK_SIZE);
+		void *i1block_buffer = malloc(BLOCK_SIZE);
 		lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + parent->iblocks[i1block_index] * BLOCK_SIZE, SEEK_SET);
-		fread(i1block_buffer, 1, BLOCK_SIZE, disk);
-		int* inode_i1bloc = NULL;
-		inode_i1bloc = (int*) (i1block_buffer);
+		read(disk, i1block_buffer, BLOCK_SIZE);
+		int *inode_i1bloc = NULL;
+		inode_i1bloc = (int *)(i1block_buffer);
 		block_to_write = inode_i1bloc[i1block_offset];
-		free(i1block_buffer);
+		std::free(i1block_buffer);
 	}
-	else if (data_block_index < N_DBLOCKS + NUM_INODE_IN_BLOCK * N_IBLOCKS + NUM_INODE_IN_BLOCK * NUM_INODE_IN_BLOCK) {
+	else if (data_block_index < N_DBLOCKS + NUM_INODE_IN_BLOCK * N_IBLOCKS + NUM_INODE_IN_BLOCK * NUM_INODE_IN_BLOCK)
+	{
 		data_block_index = data_block_index - N_DBLOCKS - NUM_INODE_IN_BLOCK * N_IBLOCKS;
 		// calculate which i1block to read (index in the data block of i2block)
 		int i2block_offset = (data_block_index - 1) / NUM_INODE_IN_BLOCK;
-		void* i2block_buffer = malloc(BLOCK_SIZE);
+		void *i2block_buffer = malloc(BLOCK_SIZE);
 		// read data block of i2block
 		lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + parent->i2block * BLOCK_SIZE, SEEK_SET);
-		fread(i2block_buffer, 1, BLOCK_SIZE, disk);
-		int* i2block_inode = (int*) i2block_buffer;
+		read(disk, i2block_buffer, BLOCK_SIZE);
+		int *i2block_inode = (int *)i2block_buffer;
 		// calculate index and offset in the given i1block
 		int i1block_index = i2block_inode[i2block_offset];
 		int i1block_offset = (data_block_index - 1) % NUM_INODE_IN_BLOCK;
-		
-		void* i1block_buffer = malloc(BLOCK_SIZE);
+
+		void *i1block_buffer = malloc(BLOCK_SIZE);
 		// read data block from i1block
 		lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + i1block_index * BLOCK_SIZE, SEEK_SET);
-		fread(i1block_buffer, 1, BLOCK_SIZE, disk);
-		int* inode_i1bloc = NULL;
-		inode_i1bloc = (int*) (i1block_buffer);
+		read(disk, i1block_buffer, BLOCK_SIZE);
+		int *inode_i1bloc = NULL;
+		inode_i1bloc = (int *)(i1block_buffer);
 		block_to_write = inode_i1bloc[i1block_offset];
 
-		free(i2block_buffer);
-		free(i1block_buffer);
+		std::free(i2block_buffer);
+		std::free(i1block_buffer);
 	}
-	else if (data_block_index < N_DBLOCKS + NUM_INODE_IN_BLOCK * N_IBLOCKS + NUM_INODE_IN_BLOCK * NUM_INODE_IN_BLOCK + NUM_INODE_IN_BLOCK * NUM_INODE_IN_BLOCK * NUM_INODE_IN_BLOCK) {
+	else if (data_block_index < N_DBLOCKS + NUM_INODE_IN_BLOCK * N_IBLOCKS + NUM_INODE_IN_BLOCK * NUM_INODE_IN_BLOCK + NUM_INODE_IN_BLOCK * NUM_INODE_IN_BLOCK * NUM_INODE_IN_BLOCK)
+	{
 		data_block_index = data_block_index - N_DBLOCKS - NUM_INODE_IN_BLOCK * N_IBLOCKS - NUM_INODE_IN_BLOCK * NUM_INODE_IN_BLOCK;
 		// calculate which i2block we will step into
 		int i3block_offset = (data_block_index - 1) / (NUM_INODE_IN_BLOCK * NUM_INODE_IN_BLOCK);
 		// read the data block of i3block
-		void* i3block_buffer = malloc(BLOCK_SIZE);
+		void *i3block_buffer = malloc(BLOCK_SIZE);
 		lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + parent->i3block * BLOCK_SIZE, SEEK_SET);
-		fread(i3block_buffer, 1, BLOCK_SIZE, disk);
-		int* i3block_inode = (int*) i3block_buffer;
+		read(disk, i3block_buffer, BLOCK_SIZE);
+		int *i3block_inode = (int *)i3block_buffer;
 
 		// calculate which i1block we will step into
 		int i2block_index = i3block_inode[i3block_offset];
@@ -709,36 +719,34 @@ int create_file (const string filename, int parent_inode, int type) {
 		i2block_offset = i2block_offset / NUM_INODE_IN_BLOCK;
 
 		// read the data block of i2block
-		void* i2block_buffer = malloc(BLOCK_SIZE);
-		lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + parent->i2block_index * BLOCK_SIZE, SEEK_SET);
-		fread(i2block_buffer, 1, BLOCK_SIZE, disk);
-		int* i2block_inode = (int*) i2block_buffer;
+		void *i2block_buffer = malloc(BLOCK_SIZE);
+		lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + i2block_index * BLOCK_SIZE, SEEK_SET);
+		read(disk, i2block_buffer, BLOCK_SIZE);
+		int *i2block_inode = (int *)i2block_buffer;
 
 		// calculate which data block of i1block we will step into
 		int i1block_index = i2block_inode[i2block_offset];
 		int i1block_offset = (data_block_index - 1) % NUM_INODE_IN_BLOCK;
-		
-		void* i1block_buffer = malloc(BLOCK_SIZE);
+
+		void *i1block_buffer = malloc(BLOCK_SIZE);
 		// read data block from i1block
 		lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + i1block_index * BLOCK_SIZE, SEEK_SET);
-		fread(i1block_buffer, 1, BLOCK_SIZE, disk);
-		int* inode_i1bloc = NULL;
-		inode_i1bloc = (int*) (i1block_buffer);
+		read(disk, i1block_buffer, BLOCK_SIZE);
+		int *inode_i1bloc = NULL;
+		inode_i1bloc = (int *)(i1block_buffer);
 		block_to_write = inode_i1bloc[i1block_offset];
 
-		free(i3block_buffer);
-		free(i2block_buffer);
-		free(i1block_buffer);		
+		std::free(i3block_buffer);
+		std::free(i2block_buffer);
+		std::free(i1block_buffer);
 	}
-	else {
+	else
+	{
 		return EXIT_FAILURE;
 	}
 
 	// write new directory entry to given position in the data block
-	lseek(fd, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + block_to_write * BLOCK_SIZE + data_block_offset, SEEK_SET);
-	write(fd, to_update, sizeof(directory_entry));
-	free(to_update);
-
-
+	lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + block_to_write * BLOCK_SIZE + data_block_offset, SEEK_SET);
+	write(disk, to_update, sizeof(directory_entry));
+	std::free(to_update);
 }
-
