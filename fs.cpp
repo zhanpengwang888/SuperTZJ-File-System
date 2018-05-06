@@ -353,7 +353,7 @@ int add_to_file_table(int inode_num, inode f_node)
 	int i;
 	for (i = 0; i < MAX_OPEN_FILE; i++)
 	{
-		if (open_file_table[i].inode_entry == 0)
+		if (open_file_table[i].inode_entry == -1)
 		{
 			open_file_table[i].inode_entry = inode_num;
 			open_file_table[i].block_index = f_node.dblocks[0];
