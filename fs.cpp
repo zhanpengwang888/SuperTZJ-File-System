@@ -797,6 +797,54 @@ int traverse_dir(int dirinode_index, string filename, bool isLast)
 	// if it still doesn't return, return a -1.
 	return FAIL;
 }
+int f_remove(const string path) {
+	vector<string> path_list = split(path, '/');
+	for (int i = 0; i < path_list.size(); i++)
+	{
+		cout << "This element is " << path_list[i] << endl;
+	}
+
+	int dir_node = sb->root;
+	bool isLast = false;
+	int temp = -1;
+	int counter = 0;
+	for (counter = 0; counter < path_list.size(); counter++)
+	{
+		// to see if it is the last thing we need to find
+		if (counter == path_list.size() - 1) {
+			isLast = true;
+		}
+		temp = dir_node;
+		dir_node = traverse_dir(dir_node, path_list[counter], isLast); //and need to consider permission problem
+		//not that simple need to consider restrict_mode
+		if (dir_node == -1)
+		{
+			cout << "The file path is incorrect" << endl;
+			// return FAIL;
+			break;
+		}
+	}
+
+	if (dir_node == -1) {
+		//if path is wrong or file does not exist, return fail
+		return EXIT_FAILURE;
+	}
+	else {
+		for (int k = 0; k < MAX_OPEN_FILE; k++) {
+			if (open_file_table[k]->inode_entry == dir_node) {
+				return EXIT_FAILURE;  //file can not be removed if it is open
+			}
+		}
+	}
+
+	//if it exists, get the inode pointer
+	inode *target = disk_inode_region[dir_node];
+	clean_file(target);
+	clean_inode(target, dir_node);
+	update_sb();
+	return SUCESS;
+
+}
 
 int f_open(const string restrict_path, const string restrict_mode)
 {
@@ -870,14 +918,6 @@ int f_open(const string restrict_path, const string restrict_mode)
 		4.set the rest
 	*/
 	inode *target = disk_inode_region[dir_node];
-	//we need to check the file table that whether the inode is already in it, if it is in it, return the file descriptor in the file table
-	for (i = 0; i < MAX_OPEN_FILE; i++)
-	{
-		if (open_file_table[i]->inode_entry == dir_node)
-		{
-			return i;
-		}
-	}
 	//if not in the file table, add an new element in it
 	int result = add_to_file_table(dir_node, target);
 	//we also need to deal with open_file_table, have a function to add and remove element in open file table
@@ -913,8 +953,6 @@ int f_open(const string restrict_path, const string restrict_mode)
 			open_file_table[result]->byte_offset = byte_offset;
 		}
 	}
-
-
 
 	return result;
 }
