@@ -329,6 +329,27 @@ void rewind(int fd) {
 	return EXIT_SUCCESS;
 }
 */
+void clean_inode(inode* cur, int index) {
+	cur->nlink = 0;
+    cur->next_inode = sb->free_inode; //the next free inode is the head of free inode list
+    cur->permission = 0;
+    cur->type = -1;
+    cur->parent = -1;
+    cur->size = 0;
+    cur->uid = 0;
+    cur->gid = 0;
+    for(int i = 0; i < N_DBLOCKS; i++) {
+      cur->dblocks[i] = 0;
+    }
+    for(int i = 0; i < N_IBLOCKS; i++) {
+      cur->iblocks[i] = 0;
+    }
+    cur->i2block = 0;
+    cur->i3block = 0;
+    strcpy(cur->file_name,""); //clear the file name
+    //update the free inode list in superblock
+    sb->free_inode = index;
+}
 
 //update the superblock and write in disk image
 void update_sb() {
@@ -379,6 +400,53 @@ int get_index(int indirect_idx, int offset) {
   free(index_buffer);
   return index_table[offset];
 }
+
+//get the specific block index by the inode pointer and the block offset in the file, offset should be positive
+//if succeed, return the data block index
+//if fail, return -1
+//update Sun 4pm
+int get_index_by_offset(inode* f_node, int offset) {
+	int entry_num = BLOCK_SIZE/sizeof(int);
+	int d_limit = N_DBLOCKS;
+	int i_limit = d_limit + N_IBLOCKS * entry_num;
+	int i2_limit = d_limit + i_limit + entry_num * entry_num;
+	int i3_limit = d_limit + i_limit + i2_limit + entry_num * entry_num * entry_num;
+	int index = offset - 1;
+	int b_index, f_index, s_index;
+	int f_offset, s_offset;
+	if(offset <= 0) {
+		cout << "No nonpositive offset!" << endl;
+		return FAIL;
+	}
+	else if(offset > 0 && offset <= d_limit) {
+		return f_node->dblocks[index];
+	}
+	else if(offset > d_limit && offset <= i_limit) {
+		int i_elem = index - d_limit; //know the exact position in indirect block list
+		b_index = get_index(f_node->iblocks[i_elem/entry_num],i_elem%entry_num);
+		return b_index;
+	}
+	else if(offset > i_limit && offset <= i2_limit) {
+		int i2_elem = index - i_limit; //only consider in the i2 block's entry
+		//get the first level indirect block index stroed in second level
+		f_index = get_index(f_node->i2block,i2_elem/entry_num);
+		f_offset = i2_elem%entry_num;
+		return get_index(f_index, f_offset);
+	}
+	else if(offset > i2_limit && offset < i3_limit) {
+		int i3_elem = index - i2_limit;
+		s_index = get_index(f_node->i3block,i3_elem/(entry_num*entry_num)); //find the second indirect block index in third level indirect block
+		s_offset = i3_elem%(entry_num*entry_num);
+		f_index = get_index(s_index,s_offset/entry_num);
+		f_offset = s_offset%entry_num;
+		return get_index(f_index,f_offset);
+	}
+	else {
+		cout << "Invalid offset number, please check it again" <<endl;
+		return FAIL;
+	}
+}
+
 //dir functions
 void clean_file(inode* f_node) {
 	//first we need to go to each data block and link to the free block list
@@ -802,6 +870,15 @@ int f_open(const string restrict_path, const string restrict_mode)
 		4.set the rest
 	*/
 	inode *target = disk_inode_region[dir_node];
+	//we need to check the file table that whether the inode is already in it, if it is in it, return the file descriptor in the file table
+	for (i = 0; i < MAX_OPEN_FILE; i++)
+	{
+		if (open_file_table[i]->inode_entry == dir_node)
+		{
+			return i;
+		}
+	}
+	//if not in the file table, add an new element in it
 	int result = add_to_file_table(dir_node, target);
 	//we also need to deal with open_file_table, have a function to add and remove element in open file table
 
@@ -826,6 +903,15 @@ int f_open(const string restrict_path, const string restrict_mode)
 	}
 	else {
 		/*  We need to update the file indicator in the open file table for mode "a" if the file exists */
+		if(restrict_mode == "a") {
+			//offset start from 1
+			int block_offset = target->size/BLOCK_SIZE + 1;
+			int byte_offset = target->size%BLOCK_SIZE;
+			int block_index = get_index_by_offset(target,block_offset);
+			open_file_table[result]->block_index = block_index;
+			open_file_table[result]->block_offset = block_offset;
+			open_file_table[result]->byte_offset = byte_offset;
+		}
 	}
 
 
