@@ -1,6 +1,6 @@
 #include "fs.h"
 
-Superblock* sb; // super block
+Superblock *sb; // super block
 file_node open_file_table[MAX_OPEN_FILE];
 inode disk_inode_region[MAX_INODE_NUM];
 int cur_directory;
@@ -64,22 +64,25 @@ int f_unmount(char* diskname) {
 }
 */
 
-int format_default_size(string filename){
+int format_default_size(string filename)
+{
 	int fd;
 	//in open we need to convert to c-style string
 	fd = open(filename.c_str(), O_RDWR | O_TRUNC | O_CREAT);
-	if (fd == -1) {
+	if (fd == -1)
+	{
 		return EXIT_FAILURE;
 	}
 	ftruncate(fd, DEFAULT_SIZE);
-	char *bootblock = (char*)malloc(BOOT_SIZE);
+	char *bootblock = (char *)malloc(BOOT_SIZE);
 	memset(bootblock, DEFAULT_DATA, BOOT_SIZE);
 	int out = write(fd, bootblock, BOOT_SIZE);
-	if (out != BOOT_SIZE) {
+	if (out != BOOT_SIZE)
+	{
 		return EXIT_FAILURE;
 	}
 	free(bootblock);
-	sb = (Superblock*) malloc(sizeof(Superblock));
+	sb = (Superblock *)malloc(sizeof(Superblock));
 	sb->size = BLOCK_SIZE;
 	sb->inode_offset = 0;
 	sb->data_offset = DEFAULT_SIZE * INODE_RATE / BLOCK_SIZE;
@@ -91,20 +94,23 @@ int format_default_size(string filename){
 	lseek(fd, BOOT_SIZE, SEEK_SET);
 	write(fd, sb, SUPER_SIZE);
 
-	for (int i = 0; i < num_of_total_data_block; i++) {
-		if (i == num_of_total_data_block - 1) {
+	for (int i = 0; i < num_of_total_data_block; i++)
+	{
+		if (i == num_of_total_data_block - 1)
+		{
 			int to_write = -1;
 			lseek(fd, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + i * BLOCK_SIZE, SEEK_SET);
 			write(fd, &to_write, sizeof(int));
 		}
-		else {
+		else
+		{
 			lseek(fd, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + i * BLOCK_SIZE, SEEK_SET);
 			write(fd, &i, sizeof(int));
 		}
 	}
 
 	// construct a default inode
-	inode* default_inode = (inode*) malloc(sizeof(inode));
+	inode *default_inode = (inode *)malloc(sizeof(inode));
 	default_inode->nlink = 0;
 	default_inode->permission = 7;
 	default_inode->type = NORMAL_FILE;
@@ -112,11 +118,13 @@ int format_default_size(string filename){
 	default_inode->size = 0;
 	default_inode->uid = 0;
 	default_inode->gid = 0;
-	for (int i = 0; i < N_DBLOCKS; i++) {
+	for (int i = 0; i < N_DBLOCKS; i++)
+	{
 		default_inode->dblocks[i] = 0;
 	}
 
-	for (int i = 0; i < N_IBLOCKS; i++) {
+	for (int i = 0; i < N_IBLOCKS; i++)
+	{
 		default_inode->iblocks[i] = 0;
 	}
 
@@ -124,18 +132,21 @@ int format_default_size(string filename){
 	default_inode->i3block = 0;
 	//can't directly assign, use strcpy
 	//default_inode->file_name = "";
-	strcpy(default_inode->file_name,"");
+	strcpy(default_inode->file_name, "");
 	default_inode->padding = 0;
 
 	num_of_total_inode = (sb->data_offset - sb->inode_offset) * BOOT_SIZE / sizeof(inode);
 
-	for (int i = 0; i < num_of_total_inode; ++i) {
-		if (i == num_of_total_inode - 1) {
+	for (int i = 0; i < num_of_total_inode; ++i)
+	{
+		if (i == num_of_total_inode - 1)
+		{
 			default_inode->next_inode = -1;
 			lseek(fd, BOOT_SIZE + SUPER_SIZE + sb->inode_offset * BLOCK_SIZE + i * sizeof(inode), SEEK_SET);
 			write(fd, default_inode, sizeof(inode));
 		}
-		else {
+		else
+		{
 			default_inode->next_inode = i + 1;
 			lseek(fd, BOOT_SIZE + SUPER_SIZE + sb->inode_offset * BLOCK_SIZE + i * sizeof(inode), SEEK_SET);
 			write(fd, default_inode, sizeof(inode));
@@ -148,22 +159,24 @@ int format_default_size(string filename){
 	return 0;
 }
 
-
-int format_with_given_size(string filename, long int file_size){
+int format_with_given_size(string filename, long int file_size)
+{
 	int fd;
 	fd = open(filename.c_str(), O_RDWR | O_TRUNC | O_CREAT);
-	if (fd == -1) {
+	if (fd == -1)
+	{
 		return EXIT_FAILURE;
 	}
 	ftruncate(fd, file_size);
-	char *bootblock = (char*) malloc(BOOT_SIZE);
+	char *bootblock = (char *)malloc(BOOT_SIZE);
 	memset(bootblock, DEFAULT_DATA, BOOT_SIZE);
 	int out = write(fd, bootblock, BOOT_SIZE);
-	if (out != BOOT_SIZE) {
+	if (out != BOOT_SIZE)
+	{
 		return EXIT_FAILURE;
 	}
 	free(bootblock);
-	sb = (Superblock*) malloc(sizeof(Superblock));
+	sb = (Superblock *)malloc(sizeof(Superblock));
 	sb->size = BLOCK_SIZE;
 	sb->inode_offset = 0;
 	sb->data_offset = file_size * INODE_RATE / BLOCK_SIZE;
@@ -174,20 +187,23 @@ int format_with_given_size(string filename, long int file_size){
 	lseek(fd, BOOT_SIZE, SEEK_SET);
 	write(fd, sb, SUPER_SIZE);
 
-	for (int i = 0; i < num_of_total_data_block; i++) {
-		if (i == num_of_total_data_block - 1) {
+	for (int i = 0; i < num_of_total_data_block; i++)
+	{
+		if (i == num_of_total_data_block - 1)
+		{
 			int to_write = -1;
 			lseek(fd, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + i * BLOCK_SIZE, SEEK_SET);
 			write(fd, &to_write, sizeof(int));
 		}
-		else {
+		else
+		{
 			lseek(fd, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + i * BLOCK_SIZE, SEEK_SET);
 			write(fd, &i, sizeof(int));
 		}
 	}
 
 	// construct a default inode
-	inode* default_inode = (inode*) malloc(sizeof(inode));
+	inode *default_inode = (inode *)malloc(sizeof(inode));
 	default_inode->nlink = 0;
 	default_inode->permission = 7;
 	default_inode->type = NORMAL_FILE;
@@ -195,29 +211,34 @@ int format_with_given_size(string filename, long int file_size){
 	default_inode->size = 0;
 	default_inode->uid = 0;
 	default_inode->gid = 0;
-	for (int i = 0; i < N_DBLOCKS; i++) {
+	for (int i = 0; i < N_DBLOCKS; i++)
+	{
 		default_inode->dblocks[i] = 0;
 	}
 
-	for (int i = 0; i < N_IBLOCKS; i++) {
+	for (int i = 0; i < N_IBLOCKS; i++)
+	{
 		default_inode->iblocks[i] = 0;
 	}
 
 	default_inode->i2block = 0;
 	default_inode->i3block = 0;
 	//default_inode->file_name = "";
-	strcpy(default_inode->file_name,"");
+	strcpy(default_inode->file_name, "");
 	default_inode->padding = 0;
 
 	num_of_total_inode = (sb->data_offset - sb->inode_offset) * BOOT_SIZE / sizeof(inode);
 
-	for (int i = 0; i < num_of_total_inode; ++i) {
-		if (i == num_of_total_inode - 1) {
+	for (int i = 0; i < num_of_total_inode; ++i)
+	{
+		if (i == num_of_total_inode - 1)
+		{
 			default_inode->next_inode = -1;
 			lseek(fd, BOOT_SIZE + SUPER_SIZE + sb->inode_offset * BLOCK_SIZE + i * sizeof(inode), SEEK_SET);
 			write(fd, default_inode, sizeof(inode));
 		}
-		else {
+		else
+		{
 			default_inode->next_inode = i + 1;
 			lseek(fd, BOOT_SIZE + SUPER_SIZE + sb->inode_offset * BLOCK_SIZE + i * sizeof(inode), SEEK_SET);
 			write(fd, default_inode, sizeof(inode));
@@ -307,29 +328,33 @@ void rewind(int fd) {
 
 //dir functions
 
-struct dirent *f_opendir(char* path) {
+struct dirent *f_opendir(char *path)
+{
 	//we can directly use f_open to do this
-
 }
-
 
 //http://ysonggit.github.io/coding/2014/12/16/split-a-string-using-c.html for split
-vector<string> split(const string &s, char delim) {
-    stringstream ss(s);
-    string item;
-    vector<string> tokens;
-    while (getline(ss, item, delim)) {
-    	if(item != "")
-        	tokens.push_back(item);
-    }
-    return tokens;
+vector<string> split(const string &s, char delim)
+{
+	stringstream ss(s);
+	string item;
+	vector<string> tokens;
+	while (getline(ss, item, delim))
+	{
+		if (item != "")
+			tokens.push_back(item);
+	}
+	return tokens;
 }
 
-int add_to_file_table(int inode_num, inode f_node) {
+int add_to_file_table(int inode_num, inode f_node)
+{
 	//get the inode from inode region
 	int i;
-	for(i = 0; i < MAX_OPEN_FILE; i++) {
-		if(open_file_table[i].inode_entry == 0) {
+	for (i = 0; i < MAX_OPEN_FILE; i++)
+	{
+		if (open_file_table[i].inode_entry == 0)
+		{
 			open_file_table[i].inode_entry = inode_num;
 			open_file_table[i].block_index = f_node.dblocks[0];
 			open_file_table[i].block_offset = 0;
@@ -339,15 +364,206 @@ int add_to_file_table(int inode_num, inode f_node) {
 	}
 	return i;
 }
-int f_open(const string restrict_path, const string restrict_mode) {
+
+// disk_buffer needs to be changed... I need the disk image to be in a buffer to get its data region.
+// use read and lseek
+// Maybe buggy...... Needs to be tested.
+int traverse_dir(int dirinode_index, string filename)
+{
+	//bool IsExist = false;
+	//size_t size_of_disk = 6666666666;				  // IT MUST BE CHANGED LATER.
+	//char *disk_buffer = (char *)malloc(size_of_disk); // IMPORTANT: hard coded buffer that contains the disk image data!!!, This needs to be changed later.
+	// first, check if the given inode has an entry in the disk inode region (i.e., Check if the directory exists or not)
+	inode direct = disk_inode_region[dirinode_index]; // get the directory
+	if (direct.nlink == 0)
+	{
+		printf("This directory does not exist.\n");
+		return FAIL;
+	}
+	// then, check if the given inode is a directory inode or not
+	if (direct.type != DIRECTORY_FILE)
+	{
+		printf("This is not a directory.\n");
+		return FAIL;
+	}
+	// now lets check the data region to check if the given filename exists or not
+	// first, look into the direct data blocks
+	size_t remaining_size = direct.size; // get the size of the directory, and says it is the remaining size.
+	int data_offset = sb->data_offset;   // get the data offset from the super block
+	size_t data_region_starting_addr = BOOT_SIZE + SUPER_SIZE + data_offset * BLOCK_SIZE;
+	for (int i = 0; i < N_DBLOCKS; i++)
+	{
+		int data_block_index = direct.dblocks[i];
+		// one data block can have 16 directory entries
+		size_t directories_starting_region = data_region_starting_addr + BLOCK_SIZE * data_block_index;
+		for (int j = 0; j < BLOCK_SIZE / sizeof(directory_entry); j++)
+		{
+			// may not work! Logic seems to be fine.
+			lseek(disk, directories_starting_region + j * sizeof(directory_entry), SEEK_SET);
+			//char *entry_char = (char *)malloc(sizeof(directory_entry));
+			char entry_char[sizeof(directory_entry)];
+			read(disk, entry_char, sizeof(directory_entry));
+			directory_entry *entry = (directory_entry *)entry_char;
+			//directory_entry *entry = (directory_entry *)disk_buffer + directories_starting_region + j * sizeof(directory_entry); // get each directory entry
+			if (string(entry->file_name) == filename)
+			{
+				return entry->inode_entry;
+			}
+			else if (remaining_size <= 0)
+			{
+				return FAIL;
+			}
+			remaining_size -= sizeof(directory_entry); // reducing the remaining size by 32 bytes.
+		}
+	}
+	// if the remaining_size is not 0, we still need to look into other data blocks.
+	// Then, look into the single indirect data blocks
+	size_t ptr_addr;
+	for (int i = 0; i < N_IBLOCKS; i++)
+	{
+		ptr_addr = data_region_starting_addr + BLOCK_SIZE * direct.iblocks[i];
+		char data_blocks_char[BLOCK_SIZE];
+		bzero(data_blocks_char, BLOCK_SIZE);
+		lseek(disk, ptr_addr, SEEK_SET);
+		read(disk, data_blocks_char, BLOCK_SIZE);
+		//memcpy(data_blocks_char, disk_buffer + ptr_addr, BLOCK_SIZE);
+		int *direct_data_block = (int *)data_blocks_char;
+		// loop through 128 direct data blocks pointers.
+		for (int j = 0; j < BLOCK_SIZE / sizeof(int); j++)
+		{
+			size_t dBlock_ptr_addr = data_region_starting_addr + BLOCK_SIZE * direct_data_block[j];
+			// loop through 16 directory entries.
+			for (int k = 0; k < BLOCK_SIZE / sizeof(directory_entry); k++)
+			{
+				lseek(disk, dBlock_ptr_addr + k * sizeof(directory_entry), SEEK_SET);
+				char entry_char[sizeof(directory_entry)];
+				read(disk, entry_char, sizeof(directory_entry));
+				directory_entry *entry = (directory_entry *)entry_char;
+				//directory_entry *entry = (directory_entry *)disk_buffer + dBlock_ptr_addr + k * sizeof(directory_entry);
+				if (string(entry->file_name) == filename)
+				{
+					return entry->inode_entry;
+				}
+				else if (remaining_size <= 0)
+				{
+					return FAIL;
+				}
+				remaining_size -= sizeof(directory_entry);
+			}
+		}
+	}
+	// Next, look into the double indirect data blocks
+	size_t i2block_ptr_addr = data_region_starting_addr + direct.i2block * BLOCK_SIZE;
+	char indirect_data_blocks_chars[BLOCK_SIZE];
+	bzero(indirect_data_blocks_chars, BLOCK_SIZE);
+	lseek(disk, i2block_ptr_addr, SEEK_SET);
+	read(disk, indirect_data_blocks_chars, BLOCK_SIZE);
+	//memcpy(indirect_data_blocks_chars, disk_buffer + i2block_ptr_addr, BLOCK_SIZE);
+	int *indirect_data_blocks = (int *)indirect_data_blocks_chars;
+	// loop through 128 indirect data blocks
+	for (int i = 0; i < BLOCK_SIZE / sizeof(int); i++)
+	{
+		size_t idblock_ptr_addr = data_region_starting_addr + indirect_data_blocks[i] * BLOCK_SIZE;
+		char data_blocks_char[BLOCK_SIZE];
+		bzero(data_blocks_char, BLOCK_SIZE);
+		lseek(disk, idblock_ptr_addr, SEEK_SET);
+		read(disk, data_blocks_char, BLOCK_SIZE);
+		//memcpy(data_blocks_char, disk_buffer + idblock_ptr_addr, BLOCK_SIZE);
+		int *direct_data_block = (int *)data_blocks_char;
+		// loop through 128 direct data blocks pointers.
+		for (int j = 0; j < BLOCK_SIZE / sizeof(int); j++)
+		{
+			size_t dBlock_ptr_addr = data_region_starting_addr + BLOCK_SIZE * direct_data_block[j];
+			// loop through 16 directory entries.
+			for (int k = 0; k < BLOCK_SIZE / sizeof(directory_entry); k++)
+			{
+				lseek(disk, dBlock_ptr_addr + k * sizeof(directory_entry), SEEK_SET);
+				char entry_char[sizeof(directory_entry)];
+				read(disk, entry_char, sizeof(directory_entry));
+				directory_entry *entry = (directory_entry *)entry_char;
+				//directory_entry *entry = (directory_entry *)disk_buffer + dBlock_ptr_addr + k * sizeof(directory_entry);
+				if (string(entry->file_name) == filename)
+				{
+					return entry->inode_entry;
+				}
+				else if (remaining_size <= 0)
+				{
+					return FAIL;
+				}
+				remaining_size -= sizeof(directory_entry);
+			}
+		}
+	}
+
+	// Finally, look into the triple indirect data blocks
+	size_t i3block_ptr_addr = data_region_starting_addr + direct.i3block * BLOCK_SIZE;
+	char i2blocks_char[BLOCK_SIZE];
+	bzero(i2blocks_char, BLOCK_SIZE);
+	lseek(disk, i3block_ptr_addr, BLOCK_SIZE);
+	read(disk, i2blocks_char, BLOCK_SIZE);
+	//memcpy(i2blocks_char, disk_buffer + i3block_ptr_addr, BLOCK_SIZE);
+	int *i2blocks = (int *)i2blocks_char;
+	// first, loop through 128 doubly indirect data blocks
+	for (int o = 0; o < BLOCK_SIZE / sizeof(int); o++)
+	{
+		size_t i2block_ptr_addr = data_region_starting_addr + i2blocks[o] * BLOCK_SIZE;
+		char indirect_data_blocks_chars[BLOCK_SIZE];
+		bzero(indirect_data_blocks_chars, BLOCK_SIZE);
+		lseek(disk, i2block_ptr_addr, BLOCK_SIZE);
+		read(disk, indirect_data_blocks_chars, BLOCK_SIZE);
+		//memcpy(indirect_data_blocks_chars, disk_buffer + i2block_ptr_addr, BLOCK_SIZE);
+		int *indirect_data_blocks = (int *)indirect_data_blocks_chars;
+		// loop through 128 indirect data blocks
+		for (int i = 0; i < BLOCK_SIZE / sizeof(int); i++)
+		{
+			size_t idblock_ptr_addr = data_region_starting_addr + indirect_data_blocks[i] * BLOCK_SIZE;
+			char data_blocks_char[BLOCK_SIZE];
+			bzero(data_blocks_char, BLOCK_SIZE);
+			lseek(disk, idblock_ptr_addr, BLOCK_SIZE);
+			read(disk, data_blocks_char, BLOCK_SIZE);
+			//memcpy(data_blocks_char, disk_buffer + idblock_ptr_addr, BLOCK_SIZE);
+			int *direct_data_block = (int *)data_blocks_char;
+			// loop through 128 direct data blocks pointers.
+			for (int j = 0; j < BLOCK_SIZE / sizeof(int); j++)
+			{
+				size_t dBlock_ptr_addr = data_region_starting_addr + BLOCK_SIZE * direct_data_block[j];
+				// loop through 16 directory entries.
+				for (int k = 0; k < BLOCK_SIZE / sizeof(directory_entry); k++)
+				{
+					lseek(disk, dBlock_ptr_addr + k * sizeof(directory_entry), SEEK_SET);
+					char entry_char[sizeof(directory_entry)];
+					read(disk, entry_char, sizeof(directory_entry));
+					directory_entry *entry = (directory_entry *)entry_char;
+					//directory_entry *entry = (directory_entry *)disk_buffer + dBlock_ptr_addr + k * sizeof(directory_entry);
+					if (string(entry->file_name) == filename)
+					{
+						return entry->inode_entry;
+					}
+					else if (remaining_size <= 0)
+					{
+						return FAIL;
+					}
+					remaining_size -= sizeof(directory_entry);
+				}
+			}
+		}
+	}
+	// if it still doesn't return, return a -1.
+	return FAIL;
+}
+
+int f_open(const string restrict_path, const string restrict_mode)
+{
 	//we need to check mode here to avoid invalid mode
-	if (restrict_mode != "r" && restrict_mode != "w" && restrict_mode != "a") {
+	if (restrict_mode != "r" && restrict_mode != "w" && restrict_mode != "a")
+	{
 		cout << "The open mode is incorrect, please input \"r\" or \"w\" or \"a\"" << endl;
 		return FAIL;
 	}
 	//parse the path to know the filename
-	vector<string> path_list = split(restrict_path,'/');
-	for(int i = 0; i < path_list.size() ; i++) {
+	vector<string> path_list = split(restrict_path, '/');
+	for (int i = 0; i < path_list.size(); i++)
+	{
 		cout << "This element is " << path_list[i] << endl;
 	}
 	//we can copy the inode region to memory! so search through the path to see whether the file is in the right position -- in mount
@@ -355,15 +571,17 @@ int f_open(const string restrict_path, const string restrict_mode) {
 	//first get the root directory inode index -- where we initialize all of these?
 	//how can we go into the disk to find the specific block if disk image is not on memory
 	int dir_node = sb->root;
-	for(int i = 0; i < path_list.size(); i++) {
-		dir_node = traverse_dir(dir_node,path_list[i]); //and need to consider permission problem
+	for (int i = 0; i < path_list.size(); i++)
+	{
+		dir_node = traverse_dir(dir_node, path_list[i]); //and need to consider permission problem
 		//not that simple need to consider restrict_mode
-		if(dir_node == -1) {
+		if (dir_node == -1)
+		{
 			cout << "The file path is incorrect" << endl;
-			return FAIL;			
+			return FAIL;
 		}
 	}
-	//if we get out of loop, it should get the target file's inode then we set up the open file table 
+	//if we get out of loop, it should get the target file's inode then we set up the open file table
 	/*set up open file table：
 		1.find the index of this file in open file table -- return value
 		2.find inode index
@@ -375,58 +593,3 @@ int f_open(const string restrict_path, const string restrict_mode) {
 	//we also need to deal with open_file_table, have a function to add and remove element in open file table
 	return result;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

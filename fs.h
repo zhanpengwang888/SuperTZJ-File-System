@@ -20,7 +20,7 @@ int f_closedir(int dirfd);
 int f_mkdir(string path, int mode);
 int f_rmdir(string filepath);
 void rewind(int fd);
-
+int traverse_dir(int dirinode_index, string filename);
 #endif
 
 
