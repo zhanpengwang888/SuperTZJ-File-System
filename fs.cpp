@@ -1011,6 +1011,7 @@ size_t f_read(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 	int tmp = byte_offset;
 	size_t data_region_starting_addr = BOOT_SIZE + SUPER_SIZE + data_offset * BLOCK_SIZE;
 	int i = 0; // keep track of where to append the buffer.
+	void* tmp_ptr = restrict_ptr;
 	// potential buggy while loop!!!!!!!!!!!!!!!!!!!!!!
 	while (remaining_size <=0) {
 		if (lseek(disk, data_region_starting_addr + BLOCK_SIZE * block_index + byte_offset, SEEK_SET) == FAIL) {
@@ -1027,8 +1028,9 @@ size_t f_read(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 		} else {
 			// if 0 < remaining_size <= 512, i.e. it is a last block, we need to set the block index, block offset,
 			// and byte offset of the target_file, and update the open file table.
-			if (0 < remaining_size <= BLOCK_SIZE) {
-				read(disk, restrict_ptr + tmp + BLOCK_SIZE * i, remaining_size);
+			if (0 < remaining_size && remaining_size <= BLOCK_SIZE) {
+				tmp_ptr  = (void*)((char*)restrict_ptr + tmp + BLOCK_SIZE * i);
+				read(disk, tmp_ptr, remaining_size);
 				byte_offset = remaining_size; // since the last block has the byte offset to be 0, the new byte offset will be remaining size - 0
 				target_file->byte_offset = byte_offset; // update byte_offset
 				target_file->block_offset = block_offset; // update block_offset
@@ -1036,7 +1038,8 @@ size_t f_read(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 				open_file_table[fd] = target_file; // put the new file node into the open file table.
 				return size_requested;
 			} else {
-				read(disk, restrict_ptr + tmp + BLOCK_SIZE * i, BLOCK_SIZE);
+				tmp_ptr  = (void*)((char*)restrict_ptr + tmp + BLOCK_SIZE * i);
+				read(disk, tmp_ptr, BLOCK_SIZE);
 				byte_offset = 0; // reset the byte offset
 				block_offset ++; // increment the block offset by 1
 				block_index = get_index_by_offset(file_inode, block_offset); // use the func to get the next block index.
@@ -1325,7 +1328,7 @@ int create_file(const string filename, int parent_inode, int type)
 		int *inode_i1bloc = NULL;
 		inode_i1bloc = (int *)(i1block_buffer);
 
-		if (data_offset == 0){
+		if (data_block_offset == 0){
 			int new_data_block;
 			new_data_block = sb->free_block;
 			sb->free_block = get_next_free_block(sb->free_block);
@@ -1415,7 +1418,7 @@ int create_file(const string filename, int parent_inode, int type)
 
 int get_next_free_block(int block_index) {
 	void* data_buffer = malloc(BLOCK_SIZE);
-	lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + block_index * BLOCK_SIZE);
+	lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + block_index * BLOCK_SIZE, SEEK_SET);
 	read(disk, data_buffer, BLOCK_SIZE);
 	int* data = (int*) data_buffer;
 	int result = data[0];
