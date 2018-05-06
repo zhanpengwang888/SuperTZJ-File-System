@@ -16,6 +16,7 @@
 
 //for function return value
 #define FAIL -1
+#define SUCCESS 0
 
 //super block information
 #define BLOCK_SIZE 512
@@ -75,9 +76,19 @@ typedef struct DirectoryEntry {
 	char file_name[28];
 } directory_entry;
 
+// file stat struct for f_stat
+struct fileStat {
+	int uid;
+	int gid;
+	int filesize;
+	int type; // dir or regular file
+	int permission;
+	int inode_index;
+};
+
 extern Superblock* sb; // super block
-extern file_node open_file_table[MAX_OPEN_FILE];
-extern inode disk_inode_region[MAX_INODE_NUM];
+extern file_node* open_file_table[MAX_OPEN_FILE];
+extern inode* disk_inode_region[MAX_INODE_NUM];
 extern int cur_directory;
 extern int num_of_total_data_block;
 extern int num_of_total_inode;

@@ -1,8 +1,8 @@
 #include "fs.h"
 
 Superblock *sb; // super block
-file_node open_file_table[MAX_OPEN_FILE];
-inode disk_inode_region[MAX_INODE_NUM];
+file_node* open_file_table[MAX_OPEN_FILE];
+inode* disk_inode_region[MAX_INODE_NUM];
 int cur_directory;
 int num_of_total_data_block;
 int num_of_total_inode;
@@ -353,12 +353,12 @@ int add_to_file_table(int inode_num, inode f_node)
 	int i;
 	for (i = 0; i < MAX_OPEN_FILE; i++)
 	{
-		if (open_file_table[i].inode_entry == -1)
+		if (open_file_table[i]->inode_entry == -1)
 		{
-			open_file_table[i].inode_entry = inode_num;
-			open_file_table[i].block_index = f_node.dblocks[0];
-			open_file_table[i].block_offset = 0;
-			open_file_table[i].byte_offset = 0;
+			open_file_table[i]->inode_entry = inode_num;
+			open_file_table[i]->block_index = f_node.dblocks[0];
+			open_file_table[i]->block_offset = 0;
+			open_file_table[i]->byte_offset = 0;
 			break;
 		}
 	}
@@ -374,26 +374,26 @@ int traverse_dir(int dirinode_index, string filename)
 	//size_t size_of_disk = 6666666666;				  // IT MUST BE CHANGED LATER.
 	//char *disk_buffer = (char *)malloc(size_of_disk); // IMPORTANT: hard coded buffer that contains the disk image data!!!, This needs to be changed later.
 	// first, check if the given inode has an entry in the disk inode region (i.e., Check if the directory exists or not)
-	inode direct = disk_inode_region[dirinode_index]; // get the directory
-	if (direct.nlink == 0)
+	inode* direct = disk_inode_region[dirinode_index]; // get the directory
+	if (direct->nlink == 0)
 	{
 		printf("This directory does not exist.\n");
 		return FAIL;
 	}
 	// then, check if the given inode is a directory inode or not
-	if (direct.type != DIRECTORY_FILE)
+	if (direct->type != DIRECTORY_FILE)
 	{
 		printf("This is not a directory.\n");
 		return FAIL;
 	}
 	// now lets check the data region to check if the given filename exists or not
 	// first, look into the direct data blocks
-	size_t remaining_size = direct.size; // get the size of the directory, and says it is the remaining size.
+	size_t remaining_size = direct->size; // get the size of the directory, and says it is the remaining size.
 	int data_offset = sb->data_offset;   // get the data offset from the super block
 	size_t data_region_starting_addr = BOOT_SIZE + SUPER_SIZE + data_offset * BLOCK_SIZE;
 	for (int i = 0; i < N_DBLOCKS; i++)
 	{
-		int data_block_index = direct.dblocks[i];
+		int data_block_index = direct->dblocks[i];
 		// one data block can have 16 directory entries
 		size_t directories_starting_region = data_region_starting_addr + BLOCK_SIZE * data_block_index;
 		for (int j = 0; j < BLOCK_SIZE / sizeof(directory_entry); j++)
@@ -421,7 +421,7 @@ int traverse_dir(int dirinode_index, string filename)
 	size_t ptr_addr;
 	for (int i = 0; i < N_IBLOCKS; i++)
 	{
-		ptr_addr = data_region_starting_addr + BLOCK_SIZE * direct.iblocks[i];
+		ptr_addr = data_region_starting_addr + BLOCK_SIZE * direct->iblocks[i];
 		char data_blocks_char[BLOCK_SIZE];
 		bzero(data_blocks_char, BLOCK_SIZE);
 		lseek(disk, ptr_addr, SEEK_SET);
@@ -453,7 +453,7 @@ int traverse_dir(int dirinode_index, string filename)
 		}
 	}
 	// Next, look into the double indirect data blocks
-	size_t i2block_ptr_addr = data_region_starting_addr + direct.i2block * BLOCK_SIZE;
+	size_t i2block_ptr_addr = data_region_starting_addr + direct->i2block * BLOCK_SIZE;
 	char indirect_data_blocks_chars[BLOCK_SIZE];
 	bzero(indirect_data_blocks_chars, BLOCK_SIZE);
 	lseek(disk, i2block_ptr_addr, SEEK_SET);
@@ -496,7 +496,7 @@ int traverse_dir(int dirinode_index, string filename)
 	}
 
 	// Finally, look into the triple indirect data blocks
-	size_t i3block_ptr_addr = data_region_starting_addr + direct.i3block * BLOCK_SIZE;
+	size_t i3block_ptr_addr = data_region_starting_addr + direct->i3block * BLOCK_SIZE;
 	char i2blocks_char[BLOCK_SIZE];
 	bzero(i2blocks_char, BLOCK_SIZE);
 	lseek(disk, i3block_ptr_addr, BLOCK_SIZE);
@@ -592,6 +592,28 @@ int f_open(const string restrict_path, const string restrict_mode)
 	int result = add_to_file_table(dir_node, target);
 	//we also need to deal with open_file_table, have a function to add and remove element in open file table
 	return result;
+}
+
+// f_close needs to take of closing a normal file or a directory (maybe).
+int f_close(int fd) {
+	// need to check if the corresponding file is open or not. NOT DONE YET!!!!!!!!!!!
+}
+
+// f_stat: get the information about the file given a file descriptor
+// it also needs to take care of both file and directory
+int f_stat(int fd, struct fileStat *info) {
+	// need to check if the fd is open or not. NOT DONE YET!!!!!!!!!!!!!!!!!
+	file_node* target_file = open_file_table[fd]; // get the file
+	int inode_index = target_file->inode_entry;
+	inode* target_file_inode = disk_inode_region[inode_index]; // get the corresponidng inode for the file
+	// update the info
+	info->inode_index = inode_index;
+	info->filesize = target_file_inode->size;
+	info->permission = target_file_inode->permission;
+	info->uid = target_file_inode->uid;
+	info->type = target_file_inode->type;
+	info->gid = target_file_inode->gid;
+	return SUCCESS;
 }
 
 int create_file (const string filename, int parent_inode, int type) {
