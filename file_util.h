@@ -35,6 +35,7 @@
 #define INODE_RATE 1/100
 #define N_DBLOCKS 10
 #define N_IBLOCKS 4
+#define NUM_INODE_IN_BLOCK BLOCK_SIZE / sizeof(inode)
 
 typedef struct superblock {
 	int size;
@@ -52,7 +53,7 @@ typedef struct Inode {
 	int type; // tell you it is a file or directory
 	int parent; //
 	int next_inode;
-	int size;
+	unsigned long size;
 	int uid;
 	int gid;
 	int dblocks[N_DBLOCKS];
@@ -60,7 +61,7 @@ typedef struct Inode {
 	int i2block;
 	int i3block;
 	char file_name[28];
-	int padding;
+	//int padding;
 } inode;
 //entry in open file table
 typedef struct file_entry {
@@ -92,6 +93,7 @@ extern inode* disk_inode_region[MAX_INODE_NUM];
 extern int cur_directory;
 extern int num_of_total_data_block;
 extern int num_of_total_inode;
+extern int num_of_open_file;
 extern int disk;
 #endif
 
