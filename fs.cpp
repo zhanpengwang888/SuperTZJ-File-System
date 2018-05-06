@@ -42,7 +42,7 @@ int f_mount(char* destination, char* diskname) {
 	write(fd, disk_inode_region[0], sizeof(inode));
 	for (int i = 0; i < MAX_OPEN_FILE; i++) {
 		open_file_table[i] = malloc(sizeof(file_node));
-		open_file_table[i]->inode_entry = 0;
+		open_file_table[i]->inode_entry = -1;
 		open_file_table[i]->block_offset = 0;
 		open_file_table[i]->byte_offset = 0;
 	}
@@ -133,7 +133,7 @@ int format_default_size(string filename)
 	//can't directly assign, use strcpy
 	//default_inode->file_name = "";
 	strcpy(default_inode->file_name, "");
-	default_inode->padding = 0;
+	//default_inode->padding = 0;
 
 	num_of_total_inode = (sb->data_offset - sb->inode_offset) * BOOT_SIZE / sizeof(inode);
 
@@ -225,7 +225,7 @@ int format_with_given_size(string filename, long int file_size)
 	default_inode->i3block = 0;
 	//default_inode->file_name = "";
 	strcpy(default_inode->file_name, "");
-	default_inode->padding = 0;
+	//default_inode->padding = 0;
 
 	num_of_total_inode = (sb->data_offset - sb->inode_offset) * BOOT_SIZE / sizeof(inode);
 
@@ -712,13 +712,10 @@ int create_file (const string filename, int parent_inode, int type) {
 		return EXIT_FAILURE;
 	}
 
-	directory_entry* new_directory_entry = (directory_entry*) malloc(directory_entry);
-	new_directory_entry->inode_entry = cur_free_inode;
-	strcpy(new_directory_entry->file_name, filename);
 	// write new directory entry to given position in the data block
 	lseek(fd, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + block_to_write * BLOCK_SIZE + data_block_offset, SEEK_SET);
-	write(fd, new_directory_entry, sizeof(directory_entry));
-	free(new_directory_entry);
+	write(fd, to_update, sizeof(directory_entry));
+	free(to_update);
 
 
 }
