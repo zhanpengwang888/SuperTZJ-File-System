@@ -12,7 +12,7 @@ int f_open(const string restrict_path, const string restrict_mode);
 size_t f_read(void *restrict_ptr, size_t size, size_t nitems, int fd);
 size_t f_write(void *restrict_ptr, size_t size, size_t nitems, int fd);
 int f_close(int fd);
-int f_stat(int fd, struct stat *info);
+int f_stat(int fd, struct fileStat *info);
 int f_remove(const string path);
 struct dirent *f_opendir(string path); // I think the argument should not be a path, if so, how to open root directory?
 struct dirent *f_readdir(int dirfd);

@@ -572,11 +572,24 @@ void clean_file(inode* f_node) {
   clean_block(f_node->i3block);
 }
 
-
-
 struct dirent *f_opendir(char *path)
 {
 	//we can directly use f_open to do this
+}
+
+// Need implementation.
+int f_closedir(int dirfd) {
+
+}
+
+// Need implementation.
+int f_mkdir(string path, int mode) {
+
+}
+
+// Need implementation.
+int f_rmdir(string filepath) {
+
 }
 
 //http://ysonggit.github.io/coding/2014/12/16/split-a-string-using-c.html for split
@@ -842,7 +855,7 @@ int f_remove(const string path) {
 	clean_file(target);
 	clean_inode(target, dir_node);
 	update_sb();
-	return SUCESS;
+	return SUCCESS;
 
 }
 
@@ -955,6 +968,105 @@ int f_open(const string restrict_path, const string restrict_mode)
 	}
 
 	return result;
+}
+
+// f_read: Not tested yet. Maybe buggy.
+size_t f_read(void *restrict_ptr, size_t size, size_t nitems, int fd) {
+	// Check if it is a valid file descriptor. Then, checking if the file is open or not.
+	// Next, check if the user has the right permission to read the file.
+	file_node *target_file = open_file_table[fd]; // get the file
+	if (fd > MAX_OPEN_FILE) {
+		printf("Invalid file descriptor.\n");
+		return FAIL;
+	} else if (target_file->inode_entry == -1) {
+		printf("This file has not been opened.\n");
+		return FAIL;
+	} else if (target_file->mode != RDONLY) {
+		printf("Permission Denied.\n");
+		return FAIL;
+	} else if (size <= 0 || nitems <=0) {
+		printf("Invalid size or nitems.\n");
+		return FAIL;
+	}
+	/*
+	logic:
+		Check every time if the remaining size is 0, if it is zero, break the loop and return the requested size to the user.
+		1. Go to the first data block by using block index, and start reading the first data block with the block offset
+		2. using lseek and read to read the first data block into the buffer (restrict_ptr), reduce the remaining size by the bytes
+		3. if we need to read more data blocks, update the byte offset to 0, increment block offset by 1, use get_index_by_offset to
+		   get the block_index of the next data block, update the block index.
+		4. lseek and read the next data blocks. Append it to the buffer + BLOCK_SIZE. Reduce the remaining size by the amount of bytes
+		   that has been read into the buffer.
+		5. if the last data block is less than BLOCK_SIZE (i.e. if 0< remaining size < 512), we need to update the block index, block_offset,
+		   byte_offset of the target_file. Finally, update the open file table.
+	*/
+	size_t size_requested = size * nitems; // set the size asked by the user
+	size_t remaining_size = size_requested; // set the remaining size.
+	int block_index = target_file->block_index;
+	int block_offset = target_file->block_offset;
+	int byte_offset = target_file->byte_offset;
+	int inode_index = target_file->inode_entry;
+	inode* file_inode = disk_inode_region[inode_index];
+	int data_offset = sb->data_offset;
+	int tmp = byte_offset;
+	size_t data_region_starting_addr = BOOT_SIZE + SUPER_SIZE + data_offset * BLOCK_SIZE;
+	int i = 0; // keep track of where to append the buffer.
+	// potential buggy while loop!!!!!!!!!!!!!!!!!!!!!!
+	while (remaining_size <=0) {
+		if (lseek(disk, data_region_starting_addr + BLOCK_SIZE * block_index + byte_offset, SEEK_SET) == FAIL) {
+			printf("[lseek in f_read] Fails");
+			return FAIL;
+		}
+		if (byte_offset != 0) {
+			int bytes_read = BLOCK_SIZE - byte_offset;
+			read(disk, restrict_ptr, bytes_read);
+			byte_offset = 0; // reset the byte offset
+			block_offset ++; // increment the block offset by 1
+			block_index = get_index_by_offset(file_inode, block_offset); // use the func to get the next block index.
+			remaining_size -= bytes_read; // reduce the remaining size by the amount of bytes that has been read.
+		} else {
+			// if 0 < remaining_size <= 512, i.e. it is a last block, we need to set the block index, block offset,
+			// and byte offset of the target_file, and update the open file table.
+			if (0 < remaining_size <= BLOCK_SIZE) {
+				read(disk, restrict_ptr + tmp + BLOCK_SIZE * i, remaining_size);
+				byte_offset = remaining_size; // since the last block has the byte offset to be 0, the new byte offset will be remaining size - 0
+				target_file->byte_offset = byte_offset; // update byte_offset
+				target_file->block_offset = block_offset; // update block_offset
+				target_file->block_index = block_index; // update block_index
+				open_file_table[fd] = target_file; // put the new file node into the open file table.
+				return size_requested;
+			} else {
+				read(disk, restrict_ptr + tmp + BLOCK_SIZE * i, BLOCK_SIZE);
+				byte_offset = 0; // reset the byte offset
+				block_offset ++; // increment the block offset by 1
+				block_index = get_index_by_offset(file_inode, block_offset); // use the func to get the next block index.
+				remaining_size -= BLOCK_SIZE; // reduce the remaining size by the amount of bytes that has been read.
+			}
+		}
+		i ++;
+	}
+	return size_requested;
+}
+
+// Need implementation.
+size_t f_write(void *restrict_ptr, size_t size, size_t nitems, int fd) {
+	// Check if it is a valid file descriptor. Then, checking if the file is open or not.
+	// Next, check if the user has the right permission to write the file.
+	file_node *target_file = open_file_table[fd]; // get the file
+	if (fd > MAX_OPEN_FILE) {
+		printf("Invalid file descriptor.\n");
+		return FAIL;
+	} else if (target_file->inode_entry == -1) {
+		printf("This file has not been opened.\n");
+		return FAIL;
+	} else if (target_file->mode != WRONLY) {
+		printf("Permission denied.\n");
+		return FAIL;
+	} else if (size <= 0 || nitems <=0) {
+		printf("Invalid size or nitems.\n");
+		return FAIL;
+	}
+
 }
 
 // f_close needs to take of closing a normal file or a directory (maybe).
