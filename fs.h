@@ -21,6 +21,7 @@ int f_mkdir(string path, int mode);
 int f_rmdir(string filepath);
 void rewind(int fd);
 int traverse_dir(int dirinode_index, string filename);
+int get_next_free_block(int block_index);
 #endif
 
 
