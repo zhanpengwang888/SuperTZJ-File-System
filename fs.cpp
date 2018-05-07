@@ -9,6 +9,7 @@ int num_of_total_data_block;
 int num_of_total_inode;
 int num_of_open_file;
 int disk;
+int open_directory_tracker[MAX_OPEN_FILE];
 
 using namespace std;
 
@@ -71,7 +72,7 @@ int f_mount(char* destination, char* diskname) {
 	}
 	//update root directory
 	disk_inode_region[0]->nlink = 1;
-	std::strcpy(disk_inode_region[0]->file_name, destination);
+	std::strncpy(disk_inode_region[0]->file_name, destination, sizeof(disk_inode_region[0]->file_name));
 	lseek(fd, BOOT_SIZE + SUPER_SIZE, SEEK_SET);
 	write(fd, disk_inode_region[0], sizeof(inode));
 	//set up open file table
@@ -931,11 +932,79 @@ int f_opendir(string path)
 	return dirfd;
 }
 
-// Need implementation
+// f_readdir explained: 
+// First call on f_readdir: gives the user the current directory, "."
+// Second call: gives the user the parent directory of the current directory, ".."
+// Third call: give the first entry under the current directory. Fourth call gives the second entry, etc.
+// Not tested yet. Potential buggy !!!!!!!!!!!!
 directory_entry *f_readdir(int dirfd) {
 	// check if the directory pointed by the dirfd has been openned or not
-	file_node *target_directory = open_file_table[dirfd];
-
+	file_node *target_directory = open_file_table[dirfd]; // get the target directory
+	// Next, check if the user has the right permission to read the file.
+	if (dirfd < 0 || dirfd > MAX_OPEN_FILE) {
+		printf("Invalid file descriptor.\n");
+		return NULL;
+	} else if (target_directory->inode_entry == -1) {
+		printf("This file has not been opened.\n");
+		return NULL;
+	} else if (target_directory->mode != RDONLY) {
+		printf("Permission Denied.\n");
+		return NULL;
+	}
+	// now, after confirming that this directory is open, we need to read the directory under this directory
+	char *dir_ptr_char = (char *)malloc(sizeof(directory_entry));
+	//directory_entry* dir_ptr = new directory_entry;
+	int counter = open_directory_tracker[dirfd]; // maybe we don't need it
+	int block_index = target_directory->block_index; // block index tells us the next datablock to read from
+	int block_offset = target_directory->block_offset; // block offset tells us which data block
+	int byte_offset = target_directory->byte_offset; // byte offset tells us which entry under this directory
+	inode* target_directory_inode = disk_inode_region[target_directory->inode_entry];
+	int data_offset = sb->data_offset;
+	size_t data_region_starting_addr = BOOT_SIZE + SUPER_SIZE + data_offset * BLOCK_SIZE;
+	int num_of_directory_entries = target_directory_inode->size / (BLOCK_SIZE * sizeof(directory_entry)); // get the number of entries under this directory
+	// if the byte_offset is 0, that means we need to give the user the current directory, "."
+	if (counter == 0) {
+		directory_entry* dir_ptr = (directory_entry *)dir_ptr_char;
+		dir_ptr->inode_entry = target_directory->inode_entry;
+		std::strcpy(dir_ptr->file_name, ".");
+		counter ++;
+		open_directory_tracker[dirfd] = counter;
+		return dir_ptr;
+	} else if (counter == 1) {
+		int parent_inode_index = target_directory_inode->parent; // get the parent's inode index
+		directory_entry* dir_ptr = (directory_entry *)dir_ptr_char;
+		dir_ptr->inode_entry = parent_inode_index;
+		std::strcpy(dir_ptr->file_name, "..");
+		counter ++;
+		open_directory_tracker[dirfd] = counter;
+		return dir_ptr;
+	} else {
+		// Third call, Fourth call, etc.
+		// use lseek and read.
+		// go to the corresponding directory entry.
+		if (lseek(disk, data_region_starting_addr + BLOCK_SIZE * block_index + byte_offset, SEEK_SET) == FAIL) {
+			printf("[lseek in f_readdir] Fails");
+			return NULL;
+		}
+		read(disk, dir_ptr_char, sizeof(directory_entry)); // read it into a directory entry buffer.
+		directory_entry* dir_ptr = (directory_entry *)dir_ptr_char;
+		// now update the open file table
+		// if the byte_offset is less than the block size, we just need to update the byte offset.
+		if (byte_offset < BLOCK_SIZE) {
+			byte_offset += sizeof(directory_entry); // increment the byte_offset by the sizeof directory_entry.
+			target_directory->byte_offset = byte_offset; // update the offset
+			open_file_table[dirfd] = target_directory; // update the open file table, maybe this step is unnecessary
+			return dir_ptr;
+		} else if (byte_offset >= BLOCK_SIZE) {
+			block_offset ++;
+			target_directory->block_offset = block_offset; // increment the block_offset by 1
+			target_directory->byte_offset = 0; // reset the byte_offset to 0
+			target_directory->block_index = get_index_by_offset(target_directory_inode, block_offset); // get the block index.
+			open_file_table[dirfd] = target_directory; // update the open file table, maybe this step is unnecessary
+			return dir_ptr;
+		}
+	}
+	// if it still does not return, something wrong happens.
 	return NULL;
 }
 
@@ -1393,10 +1462,16 @@ size_t f_read(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 	size_t data_region_starting_addr = BOOT_SIZE + SUPER_SIZE + data_offset * BLOCK_SIZE;
 	int i = 0; // keep track of where to append the buffer.
 	void* tmp_ptr = restrict_ptr;
+	int file_size = file_inode->size; // get the file size.
 	// potential buggy while loop!!!!!!!!!!!!!!!!!!!!!!
 	print_file_status(fd);
 	printf("This is f_read test printing!**************************\n");
 	printf("remaining_size is %d\n",remaining_size);
+	// if the file size is less than the size requested by the user
+	if (file_size <= size_requested) {
+		remaining_size = file_size;
+		size_requested = file_size;
+	}
 	while (remaining_size >0) {
 		if (lseek(disk, data_region_starting_addr + BLOCK_SIZE * block_index + byte_offset, SEEK_SET) == FAIL) {
 			printf("[lseek in f_read] Fails");
