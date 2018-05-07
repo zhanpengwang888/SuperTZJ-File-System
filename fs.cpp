@@ -89,7 +89,7 @@ int format_default_size(string filename)
 {
 	int fd;
 	//in open we need to convert to c-style string
-	fd = open(filename.c_str(), O_RDWR | O_TRUNC | O_CREAT);
+	fd = open(filename.c_str(), O_RDWR | O_TRUNC | O_CREAT,0777);
 	if (fd == -1)
 	{
 		return EXIT_FAILURE;
@@ -218,7 +218,7 @@ int format_default_size(string filename)
 int format_with_given_size(string filename, long int file_size)
 {
 	int fd;
-	fd = open(filename.c_str(), O_RDWR | O_TRUNC | O_CREAT);
+	fd = open(filename.c_str(), O_RDWR | O_TRUNC | O_CREAT,0777);
 	if (fd == -1)
 	{
 		return EXIT_FAILURE;
