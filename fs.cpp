@@ -1732,7 +1732,17 @@ int create_file(const string filename, int parent_inode, int type)
 				sb->free_block = get_next_free_block(sb->free_block);
 				// we need a new i2block
 				// check whether i2block can hold one more i1block
-				if (i2block_offset == NUM_INODE_IN_BLOCK - 1){
+				std::free(i1block_buffer);
+				i1block_buffer = malloc(BLOCK_SIZE);
+				lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + new_data_block_for_i1 * BLOCK_SIZE, SEEK_SET);
+				read(disk, i1block_buffer, BLOCK_SIZE);
+				int *inode_i1bloc = NULL;
+				inode_i1bloc = (int *)(i1block_buffer);
+				inode_i1bloc[0] = new_data_block;
+				lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + new_data_block_for_i1 * BLOCK_SIZE, SEEK_SET);
+				write(disk, i1block_buffer, BLOCK_SIZE);
+
+				if ((data_block_index) % (NUM_INODE_IN_BLOCK * NUM_INODE_IN_BLOCK) == NUM_INODE_IN_BLOCK - 1){
 					int new_data_block_for_i2;
 					new_data_block_for_i2 = sb->free_block;
 					sb->free_block = get_next_free_block(sb->free_block);
@@ -1754,19 +1764,8 @@ int create_file(const string filename, int parent_inode, int type)
 				else {
 					i2block_offset++; // we are now at the new i1block
 					i2block_inode[i2block_offset] = new_data_block_for_i1;
-					// write new_Data_block to the new i1block
-					std::free(i1block_buffer);
-					i1block_buffer = malloc(BLOCK_SIZE);
-					lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + new_data_block_for_i1 * BLOCK_SIZE, SEEK_SET);
-					read(disk, i1block_buffer, BLOCK_SIZE);
-					int *inode_i1bloc = NULL;
-					inode_i1bloc = (int *)(i1block_buffer);
-					inode_i1bloc[0] = new_data_block;
-					lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + new_data_block_for_i1 * BLOCK_SIZE, SEEK_SET);
-					write(disk, i1block_buffer, BLOCK_SIZE);
 					lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + i2block_index * BLOCK_SIZE, SEEK_SET);
 					write(disk, i2block_buffer, BLOCK_SIZE);
-					std::free(i1block_buffer);
 				}
 			}
 			else {
@@ -1779,7 +1778,6 @@ int create_file(const string filename, int parent_inode, int type)
 				inode_i1bloc[i1block_offset + 1] = new_data_block;
 				lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + i1block_index * BLOCK_SIZE, SEEK_SET);
 				write(disk, i1block_buffer, BLOCK_SIZE);
-				std::free(i1block_buffer);
 			}
 			block_to_write = new_data_block;
 		}
