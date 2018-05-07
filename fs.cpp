@@ -13,6 +13,18 @@ using namespace std;
 
 //temporary prototypes -- need to combine in one util.c file
 int create_file(const string filename, int parent_inode, int type);
+void clean_inode(inode* cur, int index);
+void update_sb();
+void clean_block(int index);
+int get_index(int indirect_idx, int offset);
+int get_index_by_offset(inode* f_node, int offset)
+void clean_file(inode* f_node);
+vector<string> split(const string &s, char delim);
+int add_to_file_table(int inode_num, inode *f_node);
+int traverse_dir(int dirinode_index, string filename, bool isLast);
+int create_file(const string filename, int parent_inode, int type);
+int get_next_free_block(int block_index);
+
 
 // update root in superblock, update inode, open root directory
 /*
@@ -87,7 +99,7 @@ void create_root_dir(inode* rt_node) {
   printf("what happen?\n");
   printf("the entry 0 has %s\n",entry_table[0].file_name);
   printf("the entry 1 has %s\n",entry_table[1].file_name);
-  write(disk,entry_table,BLOCK_SIZE);
+  write(disk,dir_buffer,BLOCK_SIZE);
   free(dir_buffer);
 }
 
@@ -215,8 +227,14 @@ int format_default_size(string filename)
 			write(fd, default_inode, sizeof(inode));
 		}
 	}
-	printf("I am before here\n");
 	create_root_dir(root_inode);
+	//test whether root_dir has been successfully write in
+	char* test_buffer = (char*) malloc(BLOCK_SIZE);
+	lseek(fd, BOOT_SIZE + SUPER_SIZE + sb->data_offset*BLOCK_SIZE, SEEK_SET);
+	read(fd,test_buffer,BLOCK_SIZE);
+	directory_entry* entry_table = (directory_entry*)test_buffer;
+	cout << "from file:" << entry_table[0].file_name << endl;
+	cout << "from file:" << entry_table[1].file_name << endl;
 	std::free(default_inode);
 	free(root_inode);
 	close(fd);
