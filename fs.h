@@ -14,7 +14,7 @@ size_t f_write(void *restrict_ptr, size_t size, size_t nitems, int fd);
 int f_close(int fd);
 int f_stat(int fd, struct fileStat *info);
 int f_remove(const string path);
-int *f_opendir(string path); // I think the argument should not be a path, if so, how to open root directory?
+int f_opendir(string path); // I think the argument should not be a path, if so, how to open root directory?
 directory_entry *f_readdir(int dirfd);
 int f_closedir(int dirfd);
 int f_mkdir(string path, int mode);
