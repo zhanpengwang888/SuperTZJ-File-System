@@ -555,8 +555,8 @@ int get_index_by_offset(inode* f_node, int offset) {
 	int entry_num = BLOCK_SIZE/sizeof(int);
 	int d_limit = N_DBLOCKS;
 	int i_limit = d_limit + N_IBLOCKS * entry_num;
-	int i2_limit = d_limit + i_limit + entry_num * entry_num;
-	int i3_limit = d_limit + i_limit + i2_limit + entry_num * entry_num * entry_num;
+	int i2_limit = i_limit + entry_num * entry_num;
+	int i3_limit = i2_limit + entry_num * entry_num * entry_num;
 	int index = offset - 1;
 	int b_index, f_index, s_index;
 	int f_offset, s_offset;
