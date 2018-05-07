@@ -17,7 +17,7 @@ void clean_inode(inode* cur, int index);
 void update_sb();
 void clean_block(int index);
 int get_index(int indirect_idx, int offset);
-int get_index_by_offset(inode* f_node, int offset)
+int get_index_by_offset(inode* f_node, int offset);
 void clean_file(inode* f_node);
 vector<string> split(const string &s, char delim);
 int add_to_file_table(int inode_num, inode *f_node);
@@ -91,14 +91,20 @@ void create_root_dir(inode* rt_node) {
   //read from the file descriptor
   read(disk,dir_buffer,BLOCK_SIZE);
   directory_entry* entry_table = (directory_entry*)(dir_buffer); //here we need to read from disk image
-  entry_table[0].inode_entry = 0;
+  entry_table[0].inode_entry = 1;
   strcpy(entry_table[0].file_name,".");
-  entry_table[1].inode_entry = 0;
+  entry_table[1].inode_entry = 1;
   strcpy(entry_table[1].file_name,"..");
   printf("what happen?\n");
   printf("the entry 0 has %s\n",entry_table[0].file_name);
   printf("the entry 1 has %s\n",entry_table[1].file_name);
-  write(disk,dir_buffer,BLOCK_SIZE);
+  lseek(disk, data_address,SEEK_SET);
+  int s_byte = write(disk,dir_buffer,BLOCK_SIZE);
+  // if(s_byte <= 0) {
+  // 	perror("Error\n");
+  // }
+  // else
+  // 	printf("%d\n",s_byte);
   free(dir_buffer);
 }
 
@@ -232,8 +238,8 @@ int format_default_size(string filename)
 	lseek(fd, BOOT_SIZE + SUPER_SIZE + sb->data_offset*BLOCK_SIZE, SEEK_SET);
 	read(fd,test_buffer,BLOCK_SIZE);
 	directory_entry* entry_table = (directory_entry*)test_buffer;
-	cout << "from file:" << entry_table[0].file_name << endl;
-	cout << "from file:" << entry_table[1].file_name << endl;
+	cout << "from file:" << entry_table[0].file_name << entry_table[1].inode_entry << endl;
+	cout << "from file:" << entry_table[1].file_name << entry_table[1].inode_entry << endl;
 	std::free(default_inode);
 	free(root_inode);
 	close(fd);
