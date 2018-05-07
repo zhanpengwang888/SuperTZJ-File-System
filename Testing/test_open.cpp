@@ -123,6 +123,8 @@ int main() {
 	//f_open("/usr/doc/abc.txt", "r");
 	format_default_size("test");
 	create_test_file("test");
+	//assume mount to root directory
+	f_mount("/","test");
 	f_open("/test.txt","r");
 	return 0;
 }

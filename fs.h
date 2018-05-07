@@ -3,8 +3,8 @@
 #include "file_util.h"
 using namespace std;
 //I change all the char* to string, keep those char* used as pointer instead of string
-int f_mount(char* destination, string diskname);
-int f_unmount(string diskname);
+int f_mount(char* destination, char* diskname);
+int f_unmount(char* diskname);
 int format_default_size(string filename);
 int format_with_given_size(string filename, long int file_size);
 int f_seek(int fd, long int offset, char* whence);

@@ -24,9 +24,12 @@ int add_to_file_table(int inode_num, inode *f_node);
 int traverse_dir(int dirinode_index, string filename, bool isLast);
 int get_next_free_block(int block_index);
 
+//testing function
+void print_file_table();
+
 
 // update root in superblock, update inode, open root directory
-/*
+
 int f_mount(char* destination, char* diskname) {
 	int fd;
 	fd = open(diskname, O_RDWR);
@@ -39,24 +42,28 @@ int f_mount(char* destination, char* diskname) {
 			open(diskname, O_RDWR);
 		}
 	}
-	//sb->root = destination;
-	//long int filesize = 0;
-	//fseek(fd, 0, SEEK_END);
+	//zero will always be root directory
+	sb->root = 0;
+	off_t filesize = 0;
+	filesize = lseek(fd, 0, SEEK_END);
 	//filesize = ftell(fd);
-	//fseek(fd, 0, SEEK_SET);
+	lseek(fd, 0, SEEK_SET);
+	printf("the total size of this file is %lld\n",filesize);
 	num_of_total_inode = (sb->data_offset - sb->inode_offset) * BOOT_SIZE / sizeof(inode);
 	
 	for (int i = 0; i < num_of_total_inode; ++i) {
-		disk_inode_region[i] = malloc(sizeof(inode));
-		fseek(fd, BOOT_SIZE + SUPER_SIZE + i * sizeof(inode), SEEK_SET);
+		disk_inode_region[i] = (inode*)malloc(sizeof(inode));
+		lseek(fd, BOOT_SIZE + SUPER_SIZE + i * sizeof(inode), SEEK_SET);
 		read(fd, disk_inode_region[i], sizeof(inode));
 	}
+	//update root directory
 	disk_inode_region[0]->nlink = 1;
-	disk_inode_region[0]->file_name = destination;
+	std::strcpy(disk_inode_region[0]->file_name, destination);
 	lseek(fd, BOOT_SIZE + SUPER_SIZE, SEEK_SET);
 	write(fd, disk_inode_region[0], sizeof(inode));
+	//set up open file table
 	for (int i = 0; i < MAX_OPEN_FILE; i++) {
-		open_file_table[i] = malloc(sizeof(file_node));
+		open_file_table[i] = (file_entry*)malloc(sizeof(file_node));
 		open_file_table[i]->inode_entry = -1;
 		open_file_table[i]->block_offset = 0;
 		open_file_table[i]->byte_offset = 0;
@@ -76,7 +83,7 @@ int f_unmount(char* diskname) {
 	free(sb);
 	return SUCCESS;
 }
-*/
+
 
 void create_root_dir(inode* rt_node) {
   printf("I am here\n");
@@ -1212,7 +1219,6 @@ int f_open(const string restrict_path, const string restrict_mode)
 		cout << "This element is " << path_list[i] << endl;
 	}
 
-
 	//we can copy the inode region to memory! so search through the path to see whether the file is in the right position -- in mount
 	//zhanpeng is implementing function traverse_dir(int dir_node, string filename)
 	//first get the root directory inode index -- where we initialize all of these?
@@ -1237,7 +1243,7 @@ int f_open(const string restrict_path, const string restrict_mode)
 			break;
 		}
 	}
-
+	printf("the dir_node of this file is %d\n",dir_node);
 	if (dir_node == -1) {
 		if (counter != path_list.size() - 1) {
 			return EXIT_FAILURE;
@@ -1271,6 +1277,7 @@ int f_open(const string restrict_path, const string restrict_mode)
 	inode *target = disk_inode_region[dir_node];
 	//if not in the file table, add an new element in it
 	int result = add_to_file_table(dir_node, target);
+	print_file_table();
 	//we also need to deal with open_file_table, have a function to add and remove element in open file table
 
 	// if we open a existed file with "w", we need to update its inode information -- one problem, if not change correspond data blocks, those data blocks will be lost
@@ -1779,4 +1786,18 @@ int get_next_free_block(int block_index) {
 	int result = data[0];
 	free(data_buffer);
 	return result;
+}
+
+void print_file_table() {
+	if(open_file_table[0] == NULL) {
+		printf("not initialized yet\n");
+		return;
+	}
+	for(int i = 0; i < MAX_OPEN_FILE; i++) {
+	  printf("the %d th element, inode_entry is %d\n",i,open_file_table[i]->inode_entry);
+	  printf("the %d th element, block_index is %d\n",i,open_file_table[i]->block_index);
+	  printf("the %d th element, block_offset is %d\n",i,open_file_table[i]->block_offset);
+	  printf("the %d th element, byte_offset is %d\n",i,open_file_table[i]->byte_offset);
+	  printf("the %d th element, mode is %d\n",i,open_file_table[i]->mode);
+	}
 }
