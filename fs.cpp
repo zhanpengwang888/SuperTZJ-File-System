@@ -500,6 +500,8 @@ void update_sb() {
 }
 //get the index of block, read corresponding data block in disk image and free them,
 void clean_block(int index) {
+	printf("clean_block test printing !!! &&&&&&&&&&&&&&&&&");
+	printf("the current head of free_block list is %d\n",sb->free_block);
 	size_t data_start = BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE;
   	size_t data_address = data_start + index*BLOCK_SIZE;
   	//get the data block
@@ -513,15 +515,16 @@ void clean_block(int index) {
   	bzero(data_buffer, BLOCK_SIZE);
   	int* free_block = (int*) data_buffer;
   	//write back to disk
+  	free_block[0] = sb->free_block;
   	if(lseek(disk, data_address,SEEK_SET) < 0){
   		cout << "There is something wrong in lseek of clean block" << endl;
 		return;
 	}
 	write(disk,free_block,BLOCK_SIZE);
   	//set the next free block to be the current head of free block list in superblock
-  	free_block[0] = sb->free_block;
   	//update superblock's free block element
   	sb->free_block = index;
+  	printf("after free, the current head of free_block list is %d\n",sb->free_block);
   	//do we need to update superblock in the disk? ----- NOT DONE YET !!!!!!!!
   	free(data_buffer);
 }
