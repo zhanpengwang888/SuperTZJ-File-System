@@ -17,6 +17,7 @@ void create_test_file(char* name) {
   	fseek(fp, 0, SEEK_SET);
   	cout << "the size of file is " << size <<endl;
   	file_buffer = (char*)malloc(sizeof(char) * size + 1);
+	int t_size = fread(file_buffer, size, 1,fp);
   	Superblock* sp = (Superblock*)(file_buffer + BOOT_SIZE);
 	print_superblock(sp);
 	int inode_start = BOOT_SIZE + SUPER_SIZE + sp->inode_offset * BLOCK_SIZE;
@@ -24,7 +25,8 @@ void create_test_file(char* name) {
     //print root directory's entries
     inode* inode_head = (inode*)(file_buffer + inode_start);
     inode* root = inode_head;
-    print_directory(root,file_buffer);
+    print_inode(root,0,1);
+    print_directory(sp,root,file_buffer);
 
 }
 

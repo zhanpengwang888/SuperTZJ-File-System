@@ -68,19 +68,25 @@ int f_unmount(char* diskname) {
 }
 */
 void create_root_dir(inode* rt_node) {
+  printf("I am here\n");
   size_t data_address = BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE;
   //create buffer to index_table of indirect block
   char* dir_buffer = (char*) malloc(sizeof(char) * BLOCK_SIZE);
   //lseek to specific position of the disk image and read from it -- make sure disk is valid
-  if(lseek(disk, data_address,SEEK_SET) < 0)
-  	return;
+  if(lseek(disk, data_address,SEEK_SET) < 0) {
+      perror("lseek fails\n");
+      return;
+  }
   //read from the file descriptor
   read(disk,dir_buffer,BLOCK_SIZE);
   directory_entry* entry_table = (directory_entry*)(dir_buffer); //here we need to read from disk image
   entry_table[0].inode_entry = 0;
   strcpy(entry_table[0].file_name,".");
-  entry_table[0].inode_entry = 0;
-  strcpy(entry_table[0].file_name,"..");
+  entry_table[1].inode_entry = 0;
+  strcpy(entry_table[1].file_name,"..");
+  printf("what happen?\n");
+  printf("the entry 0 has %s\n",entry_table[0].file_name);
+  printf("the entry 1 has %s\n",entry_table[1].file_name);
   write(disk,entry_table,BLOCK_SIZE);
   free(dir_buffer);
 }
@@ -90,6 +96,7 @@ int format_default_size(string filename)
 	int fd;
 	//in open we need to convert to c-style string
 	fd = open(filename.c_str(), O_RDWR | O_TRUNC | O_CREAT,0777);
+	disk = fd;
 	if (fd == -1)
 	{
 		return EXIT_FAILURE;
@@ -161,7 +168,7 @@ int format_default_size(string filename)
 	root_inode->nlink = 0;
 	root_inode->permission = RDONLY;
 	root_inode->type = DIRECTORY_FILE;
-	root_inode->next_inode = 1;
+	root_inode->next_inode = -1;
 	root_inode->size = sizeof(directory_entry) * 2; // for . and ..
 	root_inode->uid = 0;
 	root_inode->gid = 0;
@@ -170,7 +177,8 @@ int format_default_size(string filename)
 	{
 		if(i == 0)
 			root_inode->dblocks[i] = 0;
-		root_inode->dblocks[i] = -1;
+		else
+		  root_inode->dblocks[i] = -1;
 	}
 
 	for (int i = 0; i < N_IBLOCKS; i++)
@@ -191,7 +199,7 @@ int format_default_size(string filename)
 			root_inode->next_inode = -1;
 			lseek(fd, BOOT_SIZE + SUPER_SIZE + sb->inode_offset * BLOCK_SIZE + i * sizeof(inode), SEEK_SET);
 			write(fd, root_inode, sizeof(inode));
-
+			continue;
 		}
 
 		if (i == num_of_total_inode - 1)
@@ -207,6 +215,7 @@ int format_default_size(string filename)
 			write(fd, default_inode, sizeof(inode));
 		}
 	}
+	printf("I am before here\n");
 	create_root_dir(root_inode);
 	std::free(default_inode);
 	free(root_inode);
