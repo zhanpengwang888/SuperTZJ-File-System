@@ -1316,8 +1316,8 @@ int create_file(const string filename, int parent_inode, int type)
 		if (data_block_index < 0) {
 			data_block_index = 0;
 		}
-		int i1block_index = (data_block_index - 1) / NUM_INODE_IN_BLOCK;
-		int i1block_offset = (data_block_index - 1) % NUM_INODE_IN_BLOCK;
+		int i1block_index = (data_block_index) / NUM_INODE_IN_BLOCK;
+		int i1block_offset = (data_block_index) % NUM_INODE_IN_BLOCK; // whether take 1 off here?
 		// if we need a new data block
 		if (data_block_offset == 0){
 			int new_data_block;
@@ -1373,7 +1373,7 @@ int create_file(const string filename, int parent_inode, int type)
 			data_block_index = 0;
 		}
 		// calculate which i1block to read (index in the data block of i2block)
-		int i2block_offset = (data_block_index - 1) / NUM_INODE_IN_BLOCK;
+		int i2block_offset = (data_block_index) / NUM_INODE_IN_BLOCK;
 		void *i2block_buffer = malloc(BLOCK_SIZE);
 		// read data block of i2block
 		lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + parent->i2block * BLOCK_SIZE, SEEK_SET);
@@ -1381,7 +1381,7 @@ int create_file(const string filename, int parent_inode, int type)
 		int *i2block_inode = (int *)i2block_buffer;
 		// calculate index and offset in the given i1block
 		int i1block_index = i2block_inode[i2block_offset];
-		int i1block_offset = (data_block_index - 1) % NUM_INODE_IN_BLOCK;
+		int i1block_offset = (data_block_index) % NUM_INODE_IN_BLOCK;
 		// we need a new data block
 		if (data_block_offset == 0) {
 			int new_data_block;
@@ -1439,7 +1439,7 @@ int create_file(const string filename, int parent_inode, int type)
 			data_block_index = 0;
 		}		
 		// calculate which i2block we will step into
-		int i3block_offset = (data_block_index - 1) / (NUM_INODE_IN_BLOCK * NUM_INODE_IN_BLOCK);
+		int i3block_offset = (data_block_index) / (NUM_INODE_IN_BLOCK * NUM_INODE_IN_BLOCK);
 		// read the data block of i3block
 		void *i3block_buffer = malloc(BLOCK_SIZE);
 		lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + parent->i3block * BLOCK_SIZE, SEEK_SET);
@@ -1448,7 +1448,7 @@ int create_file(const string filename, int parent_inode, int type)
 
 		// calculate which i1block we will step into
 		int i2block_index = i3block_inode[i3block_offset];
-		int i2block_offset = (data_block_index - 1) % (NUM_INODE_IN_BLOCK * NUM_INODE_IN_BLOCK);
+		int i2block_offset = (data_block_index) % (NUM_INODE_IN_BLOCK * NUM_INODE_IN_BLOCK);
 		i2block_offset = i2block_offset / NUM_INODE_IN_BLOCK;
 
 		// read the data block of i2block
@@ -1459,7 +1459,7 @@ int create_file(const string filename, int parent_inode, int type)
 
 		// calculate which data block of i1block we will step into
 		int i1block_index = i2block_inode[i2block_offset];
-		int i1block_offset = (data_block_index - 1) % NUM_INODE_IN_BLOCK;
+		int i1block_offset = (data_block_index) % NUM_INODE_IN_BLOCK;
 
 		void *i1block_buffer = malloc(BLOCK_SIZE);
 		// read data block from i1block
