@@ -158,13 +158,13 @@ int format_default_size(string filename)
 
 	//root directory inode
 	inode* root_inode = (inode *)malloc(sizeof(inode));
-	default_inode->nlink = 0;
-	default_inode->permission = RDONLY;
-	default_inode->type = DIRECTORY_FILE;
-	default_inode->next_inode = 1;
-	default_inode->size = sizeof(directory_entry) * 2; // for . and ..
-	default_inode->uid = 0;
-	default_inode->gid = 0;
+	root_inode->nlink = 0;
+	root_inode->permission = RDONLY;
+	root_inode->type = DIRECTORY_FILE;
+	root_inode->next_inode = 1;
+	root_inode->size = sizeof(directory_entry) * 2; // for . and ..
+	root_inode->uid = 0;
+	root_inode->gid = 0;
 
 	for (int i = 0; i < N_DBLOCKS; i++)
 	{
