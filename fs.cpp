@@ -91,9 +91,9 @@ void create_root_dir(inode* rt_node) {
   //read from the file descriptor
   read(disk,dir_buffer,BLOCK_SIZE);
   directory_entry* entry_table = (directory_entry*)(dir_buffer); //here we need to read from disk image
-  entry_table[0].inode_entry = 1;
+  entry_table[0].inode_entry = 0;
   strcpy(entry_table[0].file_name,".");
-  entry_table[1].inode_entry = 1;
+  entry_table[1].inode_entry = 0;
   strcpy(entry_table[1].file_name,"..");
   printf("what happen?\n");
   printf("the entry 0 has %s\n",entry_table[0].file_name);
@@ -242,7 +242,7 @@ int format_default_size(string filename)
 	cout << "from file:" << entry_table[1].file_name << entry_table[1].inode_entry << endl;
 	std::free(default_inode);
 	free(root_inode);
-	close(fd);
+	//close(fd);
 	//need to replace by predefined
 	return 0;
 }
@@ -372,7 +372,7 @@ int format_with_given_size(string filename, long int file_size)
 	create_root_dir(root_inode);
 	std::free(default_inode);
 	free(root_inode);
-	close(fd);
+	//close(fd);
 	//need to replace by predefined
 	return 0;
 }

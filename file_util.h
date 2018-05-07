@@ -30,7 +30,7 @@
 #define DIRECTORY_FILE 0
 #define NORMAL_FILE 1
 //inode information
-#define MAX_INODE_NUM 100000
+#define MAX_INODE_NUM 1000
 #define INODE_SIZE sizeof(inode)
 #define INODE_RATE 1/100
 #define N_DBLOCKS 10
