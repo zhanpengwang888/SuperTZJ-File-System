@@ -22,7 +22,6 @@ void clean_file(inode* f_node);
 vector<string> split(const string &s, char delim);
 int add_to_file_table(int inode_num, inode *f_node);
 int traverse_dir(int dirinode_index, string filename, bool isLast);
-int create_file(const string filename, int parent_inode, int type);
 int get_next_free_block(int block_index);
 
 
@@ -250,6 +249,7 @@ int format_with_given_size(string filename, long int file_size)
 	{
 		return EXIT_FAILURE;
 	}
+	disk = fd;
 	ftruncate(fd, file_size);
 	char *bootblock = (char *)malloc(BOOT_SIZE);
 	memset(bootblock, DEFAULT_DATA, BOOT_SIZE);
@@ -310,10 +310,46 @@ int format_with_given_size(string filename, long int file_size)
 	std::strcpy(default_inode->file_name, "");
 	//default_inode->padding = 0;
 
+	//root directory inode
+	inode* root_inode = (inode *)malloc(sizeof(inode));
+	root_inode->nlink = 0;
+	root_inode->permission = RDONLY;
+	root_inode->type = DIRECTORY_FILE;
+	root_inode->next_inode = -1;
+	root_inode->size = sizeof(directory_entry) * 2; // for . and ..
+	root_inode->uid = 0;
+	root_inode->gid = 0;
+
+	for (int i = 0; i < N_DBLOCKS; i++)
+	{
+		if(i == 0)
+			root_inode->dblocks[i] = 0;
+		else
+		  root_inode->dblocks[i] = -1;
+	}
+
+	for (int i = 0; i < N_IBLOCKS; i++)
+	{
+		root_inode->iblocks[i] = -1;
+	}
+
+	root_inode->i2block = -1;
+	root_inode->i3block = -1;
+	//root directory name is /
+	std::strcpy(root_inode->file_name, "/");
+
 	num_of_total_inode = (sb->data_offset - sb->inode_offset) * BOOT_SIZE / sizeof(inode);
 
 	for (int i = 0; i < num_of_total_inode; ++i)
 	{
+				//the first one will be root directory
+		if(i == 0) {
+			root_inode->next_inode = -1;
+			lseek(fd, BOOT_SIZE + SUPER_SIZE + sb->inode_offset * BLOCK_SIZE + i * sizeof(inode), SEEK_SET);
+			write(fd, root_inode, sizeof(inode));
+			continue;
+		}
+
 		if (i == num_of_total_inode - 1)
 		{
 			default_inode->next_inode = -1;
@@ -327,10 +363,10 @@ int format_with_given_size(string filename, long int file_size)
 			write(fd, default_inode, sizeof(inode));
 		}
 	}
-
+	create_root_dir(root_inode);
 	std::free(default_inode);
+	free(root_inode);
 	close(fd);
-	disk = fd; //why we need to store it?
 	//need to replace by predefined
 	return 0;
 }
