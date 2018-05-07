@@ -693,13 +693,225 @@ void clean_file(inode* f_node) {
   clean_block(f_node->i3block);
 }
 
-int *f_opendir(string path)
+int traverse_directory(int dirinode_index, string directory_name) {
+// first, check if the given inode has an entry in the disk inode region (i.e., Check if the directory exists or not)
+	inode *direct = disk_inode_region[dirinode_index]; // get the directory
+	if (direct->nlink == 0)
+	{
+		printf("This directory does not exist.\n");
+		return FAIL;
+	}
+	// then, check if the given inode is a directory inode or not
+	if (direct->type != DIRECTORY_FILE)
+	{
+		printf("This is not a directory.\n");
+		return FAIL;
+	}
+	// now lets check the data region to check if the given directory exists or not
+	// first, look into the direct data blocks
+	size_t remaining_size = direct->size; // get the size of the directory, and says it is the remaining size.
+	int data_offset = sb->data_offset;	// get the data offset from the super block
+	size_t data_region_starting_addr = BOOT_SIZE + SUPER_SIZE + data_offset * BLOCK_SIZE;
+	for (int i = 0; i < N_DBLOCKS; i++)
+	{
+		int data_block_index = direct->dblocks[i];
+		// one data block can have 16 directory entries
+		size_t directories_starting_region = data_region_starting_addr + BLOCK_SIZE * data_block_index;
+		for (int j = 0; j < BLOCK_SIZE / sizeof(directory_entry); j++)
+		{
+			// may not work! Logic seems to be fine.
+			lseek(disk, directories_starting_region + j * sizeof(directory_entry), SEEK_SET);
+			//char *entry_char = (char *)malloc(sizeof(directory_entry));
+			char entry_char[sizeof(directory_entry)];
+			read(disk, entry_char, sizeof(directory_entry));
+			directory_entry *entry = (directory_entry *)entry_char;
+			//directory_entry *entry = (directory_entry *)disk_buffer + directories_starting_region + j * sizeof(directory_entry); // get each directory entry
+			if (string(entry->file_name) == directory_name)
+			{
+				return entry->inode_entry;
+			}
+			remaining_size -= sizeof(directory_entry); // reducing the remaining size by 32 bytes.
+			if (remaining_size <= 0)
+			{
+				return FAIL;
+			}
+		}
+	}
+	// if the remaining_size is not 0, we still need to look into other data blocks.
+	// Then, look into the single indirect data blocks
+	size_t ptr_addr;
+	for (int i = 0; i < N_IBLOCKS; i++)
+	{
+		ptr_addr = data_region_starting_addr + BLOCK_SIZE * direct->iblocks[i];
+		char data_blocks_char[BLOCK_SIZE];
+		bzero(data_blocks_char, BLOCK_SIZE);
+		lseek(disk, ptr_addr, SEEK_SET);
+		read(disk, data_blocks_char, BLOCK_SIZE);
+		//memcpy(data_blocks_char, disk_buffer + ptr_addr, BLOCK_SIZE);
+		int *direct_data_block = (int *)data_blocks_char;
+		// loop through 128 direct data blocks pointers.
+		for (int j = 0; j < BLOCK_SIZE / sizeof(int); j++)
+		{
+			size_t dBlock_ptr_addr = data_region_starting_addr + BLOCK_SIZE * direct_data_block[j];
+			// loop through 16 directory entries.
+			for (int k = 0; k < BLOCK_SIZE / sizeof(directory_entry); k++)
+			{
+				lseek(disk, dBlock_ptr_addr + k * sizeof(directory_entry), SEEK_SET);
+				char entry_char[sizeof(directory_entry)];
+				read(disk, entry_char, sizeof(directory_entry));
+				directory_entry *entry = (directory_entry *)entry_char;
+				//directory_entry *entry = (directory_entry *)disk_buffer + dBlock_ptr_addr + k * sizeof(directory_entry);
+				if (string(entry->file_name) == directory_name)
+				{
+					return entry->inode_entry;
+				}
+				remaining_size -= sizeof(directory_entry);
+				if (remaining_size <= 0)
+				{
+					return FAIL;
+				}
+			}
+		}
+	}
+	// Next, look into the double indirect data blocks
+	size_t i2block_ptr_addr = data_region_starting_addr + direct->i2block * BLOCK_SIZE;
+	char indirect_data_blocks_chars[BLOCK_SIZE];
+	bzero(indirect_data_blocks_chars, BLOCK_SIZE);
+	lseek(disk, i2block_ptr_addr, SEEK_SET);
+	read(disk, indirect_data_blocks_chars, BLOCK_SIZE);
+	//memcpy(indirect_data_blocks_chars, disk_buffer + i2block_ptr_addr, BLOCK_SIZE);
+	int *indirect_data_blocks = (int *)indirect_data_blocks_chars;
+	// loop through 128 indirect data blocks
+	for (int i = 0; i < BLOCK_SIZE / sizeof(int); i++)
+	{
+		size_t idblock_ptr_addr = data_region_starting_addr + indirect_data_blocks[i] * BLOCK_SIZE;
+		char data_blocks_char[BLOCK_SIZE];
+		bzero(data_blocks_char, BLOCK_SIZE);
+		lseek(disk, idblock_ptr_addr, SEEK_SET);
+		read(disk, data_blocks_char, BLOCK_SIZE);
+		//memcpy(data_blocks_char, disk_buffer + idblock_ptr_addr, BLOCK_SIZE);
+		int *direct_data_block = (int *)data_blocks_char;
+		// loop through 128 direct data blocks pointers.
+		for (int j = 0; j < BLOCK_SIZE / sizeof(int); j++)
+		{
+			size_t dBlock_ptr_addr = data_region_starting_addr + BLOCK_SIZE * direct_data_block[j];
+			// loop through 16 directory entries.
+			for (int k = 0; k < BLOCK_SIZE / sizeof(directory_entry); k++)
+			{
+				lseek(disk, dBlock_ptr_addr + k * sizeof(directory_entry), SEEK_SET);
+				char entry_char[sizeof(directory_entry)];
+				read(disk, entry_char, sizeof(directory_entry));
+				directory_entry *entry = (directory_entry *)entry_char;
+				//directory_entry *entry = (directory_entry *)disk_buffer + dBlock_ptr_addr + k * sizeof(directory_entry);
+				if (string(entry->file_name) == directory_name)
+				{
+					return entry->inode_entry;
+				}
+				remaining_size -= sizeof(directory_entry);
+				if (remaining_size <= 0)
+				{
+					return FAIL;
+				}
+			}
+		}
+	}
+
+	// Finally, look into the triple indirect data blocks
+	size_t i3block_ptr_addr = data_region_starting_addr + direct->i3block * BLOCK_SIZE;
+	char i2blocks_char[BLOCK_SIZE];
+	bzero(i2blocks_char, BLOCK_SIZE);
+	lseek(disk, i3block_ptr_addr, BLOCK_SIZE);
+	read(disk, i2blocks_char, BLOCK_SIZE);
+	//memcpy(i2blocks_char, disk_buffer + i3block_ptr_addr, BLOCK_SIZE);
+	int *i2blocks = (int *)i2blocks_char;
+	// first, loop through 128 doubly indirect data blocks
+	for (int o = 0; o < BLOCK_SIZE / sizeof(int); o++)
+	{
+		size_t i2block_ptr_addr = data_region_starting_addr + i2blocks[o] * BLOCK_SIZE;
+		char indirect_data_blocks_chars[BLOCK_SIZE];
+		bzero(indirect_data_blocks_chars, BLOCK_SIZE);
+		lseek(disk, i2block_ptr_addr, BLOCK_SIZE);
+		read(disk, indirect_data_blocks_chars, BLOCK_SIZE);
+		//memcpy(indirect_data_blocks_chars, disk_buffer + i2block_ptr_addr, BLOCK_SIZE);
+		int *indirect_data_blocks = (int *)indirect_data_blocks_chars;
+		// loop through 128 indirect data blocks
+		for (int i = 0; i < BLOCK_SIZE / sizeof(int); i++)
+		{
+			size_t idblock_ptr_addr = data_region_starting_addr + indirect_data_blocks[i] * BLOCK_SIZE;
+			char data_blocks_char[BLOCK_SIZE];
+			bzero(data_blocks_char, BLOCK_SIZE);
+			lseek(disk, idblock_ptr_addr, BLOCK_SIZE);
+			read(disk, data_blocks_char, BLOCK_SIZE);
+			//memcpy(data_blocks_char, disk_buffer + idblock_ptr_addr, BLOCK_SIZE);
+			int *direct_data_block = (int *)data_blocks_char;
+			// loop through 128 direct data blocks pointers.
+			for (int j = 0; j < BLOCK_SIZE / sizeof(int); j++)
+			{
+				size_t dBlock_ptr_addr = data_region_starting_addr + BLOCK_SIZE * direct_data_block[j];
+				// loop through 16 directory entries.
+				for (int k = 0; k < BLOCK_SIZE / sizeof(directory_entry); k++)
+				{
+					lseek(disk, dBlock_ptr_addr + k * sizeof(directory_entry), SEEK_SET);
+					char entry_char[sizeof(directory_entry)];
+					read(disk, entry_char, sizeof(directory_entry));
+					directory_entry *entry = (directory_entry *)entry_char;
+					//directory_entry *entry = (directory_entry *)disk_buffer + dBlock_ptr_addr + k * sizeof(directory_entry);
+					if (string(entry->file_name) == directory_name)
+					{
+						return entry->inode_entry;
+					}
+					remaining_size -= sizeof(directory_entry);
+					if (remaining_size <= 0)
+					{
+						return FAIL;
+					}
+				}
+			}
+		}
+	}
+	// if it still doesn't return, return a -1.
+	return FAIL;
+}
+
+// f_opendir
+// Not tested yet. Potential buggy.
+int f_opendir(string path)
 {
 	//we can directly use f_open to do this
+	//parse the path to know the filename
+	vector<string> path_list = split(path, '/');
+	for (int i = 0; i < path_list.size(); i++)
+	{
+		cout << "This element is " << path_list[i] << endl;
+	}
+	int dir_node = sb->root; // starting from the root
+	unsigned int counter = 0;
+	for (counter = 0; counter < path_list.size(); counter++)
+	{
+		// traverse all the directory to see if the path is valid, i.e. if the directory exists;
+		dir_node = traverse_directory(dir_node, path_list[counter]);
+		if (dir_node == FAIL) {
+			cout << "The file path is invalid" << endl;
+			return FAIL;
+		}
+	}
+	// check if the directory is already opened.
+	for (int j = 0; j < MAX_OPEN_FILE; j++) {
+		if (open_file_table[j]->inode_entry == dir_node) {
+			return j;
+		}
+	}
+	// now let's add it into the open file table
+	inode *target_directory = disk_inode_region[dir_node];
+	int dirfd = add_to_file_table(dir_node, target_directory); // add it into the open file table
+	return dirfd;
 }
 
 // Need implementation
 directory_entry *f_readdir(int dirfd) {
+	// check if the directory pointed by the dirfd has been openned or not
+	file_node *target_directory = open_file_table[dirfd];
+
 	return NULL;
 }
 
@@ -1101,7 +1313,7 @@ size_t f_read(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 	// Check if it is a valid file descriptor. Then, checking if the file is open or not.
 	// Next, check if the user has the right permission to read the file.
 	file_node *target_file = open_file_table[fd]; // get the file
-	if (fd > MAX_OPEN_FILE) {
+	if (fd < 0 || fd > MAX_OPEN_FILE) {
 		printf("Invalid file descriptor.\n");
 		return FAIL;
 	} else if (target_file->inode_entry == -1) {
@@ -1182,7 +1394,7 @@ size_t f_write(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 	// Check if it is a valid file descriptor. Then, checking if the file is open or not.
 	// Next, check if the user has the right permission to write the file.
 	file_node *target_file = open_file_table[fd]; // get the file
-	if (fd > MAX_OPEN_FILE) {
+	if (fd < 0 || fd > MAX_OPEN_FILE) {
 		printf("Invalid file descriptor.\n");
 		return FAIL;
 	} else if (target_file->inode_entry == -1) {
