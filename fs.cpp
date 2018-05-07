@@ -44,8 +44,19 @@ int f_mount(char* destination, char* diskname) {
 			open(diskname, O_RDWR);
 		}
 	}
+	disk = fd; //set disk to fd
 	//zero will always be root directory
+	//read in superblock here
+	//if superblock has not been initialized
+	if(sb == NULL) {
+		sb = (Superblock *)malloc(sizeof(Superblock));
+	}
+	//read the stuff into superblock
+	lseek(disk,BOOT_SIZE,SEEK_SET);
+	read(disk,sb,sizeof(Superblock));
 	sb->root = 0;
+	//printf("f_mount testing print************************************\n");
+	//get file size of disk
 	off_t filesize = 0;
 	filesize = lseek(fd, 0, SEEK_END);
 	//filesize = ftell(fd);
@@ -105,9 +116,9 @@ void create_root_dir(inode* rt_node) {
   strcpy(entry_table[0].file_name,".");
   entry_table[1].inode_entry = 0;
   strcpy(entry_table[1].file_name,"..");
-  printf("what happen?\n");
-  printf("the entry 0 has %s\n",entry_table[0].file_name);
-  printf("the entry 1 has %s\n",entry_table[1].file_name);
+  //printf("what happen?\n");
+  //printf("the entry 0 has %s\n",entry_table[0].file_name);
+  //printf("the entry 1 has %s\n",entry_table[1].file_name);
   lseek(disk, data_address,SEEK_SET);
   int s_byte = write(disk,dir_buffer,BLOCK_SIZE);
   // if(s_byte <= 0) {
@@ -123,11 +134,11 @@ int format_default_size(string filename)
 	int fd;
 	//in open we need to convert to c-style string
 	fd = open(filename.c_str(), O_RDWR | O_TRUNC | O_CREAT,0777);
-	disk = fd;
 	if (fd == -1)
 	{
 		return EXIT_FAILURE;
 	}
+	disk = fd;
 	ftruncate(fd, DEFAULT_SIZE);
 	char *bootblock = (char *)malloc(BOOT_SIZE);
 	memset(bootblock, DEFAULT_DATA, BOOT_SIZE);
@@ -252,7 +263,7 @@ int format_default_size(string filename)
 	//cout << "from file:" << entry_table[1].file_name << entry_table[1].inode_entry << endl;
 	std::free(default_inode);
 	free(root_inode);
-	//close(fd);
+	close(fd);
 	//need to replace by predefined
 	return 0;
 }
@@ -382,7 +393,7 @@ int format_with_given_size(string filename, long int file_size)
 	create_root_dir(root_inode);
 	std::free(default_inode);
 	free(root_inode);
-	//close(fd);
+	close(fd);
 	//need to replace by predefined
 	return 0;
 }
