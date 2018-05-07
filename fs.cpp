@@ -1515,18 +1515,21 @@ size_t f_read(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 	return size_requested;
 }
 
-// Need implementation.
 size_t f_write(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 	// Check if it is a valid file descriptor. Then, checking if the file is open or not.
 	// Next, check if the user has the right permission to write the file.
+	if (fd > MAX_OPEN_FILE) {
+		printf("Invalid file descriptor.\n");
+		return FAIL;		
+	}
 	file_node *target_file = open_file_table[fd]; // get the file
-	if (fd < 0 || fd > MAX_OPEN_FILE) {
+	if (fd > MAX_OPEN_FILE) {
 		printf("Invalid file descriptor.\n");
 		return FAIL;
 	} else if (target_file->inode_entry == -1) {
 		printf("This file has not been opened.\n");
 		return FAIL;
-	} else if (target_file->mode != WRONLY) {
+	} else if (target_file->mode != WRONLY || target_file->mode != WRONLY + RDONLY || target_file->mode != WRONLY + RDONLY + EXEONLY) {
 		printf("Permission denied.\n");
 		return FAIL;
 	} else if (size <= 0 || nitems <=0) {
@@ -1534,7 +1537,269 @@ size_t f_write(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 		return FAIL;
 	}
 
+	inode* inode_of_file = disk_inode_region[target_file->inode_entry];
+	long starting_size = (target_file->block_offset - 1) * BLOCK_SIZE;
+	long data_block_index = starting_size / BLOCK_SIZE;
+	void* rounded_buffer;
+	void* transfer_buffer = rounded_buffer;
+	size_t num_byte_need_to_copy = size * nitems;
+	int curr_block = target_file->block_index;
+	int curr_offset = target_file->byte_offset;
+	long blocks_needed;
+	blocks_needed = num_byte_need_to_copy + curr_offset;
+	if (blocks_needed % BLOCK_SIZE == 0) {
+		blocks_needed = blocks_needed / BLOCK_SIZE;
+	}
+	else {
+		blocks_needed = blocks_needed / BLOCK_SIZE + 1;
+	}
+	int padding = starting_size + blocks_needed * BLOCK_SIZE - curr_offset - num_byte_need_to_copy;
+	if (padding > 511) {
+		printf("I died here! It sucks!!!\n");
+		return FAIL;
+	}
+	// now our buffer looks like following:
+	// origin data in the block ||| data we need to copy  ||| padding that fills the block
+	rounded_buffer = malloc(blocks_needed * BLOCK_SIZE);
+	bzero(rounded_buffer, blocks_needed * BLOCK_SIZE);
+	lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + curr_block * BLOCK_SIZE, SEEK_SET);
+	read(disk, rounded_buffer, curr_offset);
+	transfer_buffer = (void*) ((char*) rounded_buffer + curr_offset);
+	memcpy(transfer_buffer, restrict_ptr, num_byte_need_to_copy);
+	long block_to_write = -1;
+	for (int i = 0; i < blocks_needed; i++) {
+		data_block_index = starting_size / BLOCK_SIZE;
+		// cases when we rewrite current block
+		if (i == 0 && curr_offset != 0) {
+			block_to_write = curr_block;
+			transfer_buffer = (void*) ((char*) rounded_buffer + i * BLOCK_SIZE);
+			lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + block_to_write * BLOCK_SIZE, SEEK_SET);
+			write(disk, transfer_buffer, BLOCK_SIZE);
+			starting_size += BLOCK_SIZE;
+			continue;
+		}
+		if (data_block_index < N_DBLOCKS) {
+			int new_dblock = sb->free_block;
+			sb->free_block = get_next_free_block(sb->free_block);
+			inode_of_file->dblocks[data_block_index] = new_dblock;
+			lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->inode_offset * BLOCK_SIZE + target_file->inode_entry * sizeof(inode), SEEK_SET);
+			write(disk, inode_of_file, sizeof(inode));
+			// write data to the new_dblock
+			block_to_write = new_dblock;
+			transfer_buffer = (void*) ((char*) rounded_buffer + i * BLOCK_SIZE);
+			lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + block_to_write * BLOCK_SIZE, SEEK_SET);
+			write(disk, transfer_buffer, BLOCK_SIZE);
+			starting_size += BLOCK_SIZE;
+		}
+		else if (data_block_index < N_DBLOCKS + NUM_INODE_IN_BLOCK * N_IBLOCKS) {
+			data_block_index -= N_DBLOCKS;
+			int new_data_block;
+			new_data_block = sb->free_block;
+			sb->free_block = get_next_free_block(sb->free_block);
+			int i1block_index = (data_block_index) / NUM_INODE_IN_BLOCK;
+			int i1block_offset = (data_block_index) % NUM_INODE_IN_BLOCK;
+			if (i1block_offset == 0){
+				int new_data_block_for_i1;
+				new_data_block_for_i1 = sb->free_block;
+				sb->free_block = get_next_free_block(sb->free_block);
+				//i1block_index++; // we are now at the new i1block
+				inode_of_file->iblocks[i1block_index] = new_data_block_for_i1;
+				// write new_Data_block to the new i1block
+				void *i1block_buffer = malloc(BLOCK_SIZE);
+				lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + inode_of_file->iblocks[i1block_index] * BLOCK_SIZE, SEEK_SET);
+				read(disk, i1block_buffer, BLOCK_SIZE);
+				int *inode_i1bloc = NULL;
+				inode_i1bloc = (int *)(i1block_buffer);
+				inode_i1bloc[0] = new_data_block;
+				// set the file indicator back to where it was, shit
+				lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + inode_of_file->iblocks[i1block_index] * BLOCK_SIZE, SEEK_SET);
+				write(disk, i1block_buffer, BLOCK_SIZE);
+				std::free(i1block_buffer);
+			}
+			else {
+				void *i1block_buffer = malloc(BLOCK_SIZE);
+				lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + i1block_index * BLOCK_SIZE, SEEK_SET);
+				read(disk, i1block_buffer, BLOCK_SIZE);
+				int *inode_i1bloc = NULL;
+				inode_i1bloc = (int *)(i1block_buffer);
+				inode_i1bloc[i1block_offset] = new_data_block;
+				lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + i1block_index * BLOCK_SIZE, SEEK_SET);
+				write(disk, i1block_buffer, BLOCK_SIZE);
+				std::free(i1block_buffer);
+			}			
+			block_to_write = new_data_block;
+			transfer_buffer = (void*) ((char*) rounded_buffer + i * BLOCK_SIZE);
+			lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + block_to_write * BLOCK_SIZE, SEEK_SET);
+			write(disk, transfer_buffer, BLOCK_SIZE);
+			starting_size += BLOCK_SIZE;
+		}
+		else if (data_block_index < N_DBLOCKS + NUM_INODE_IN_BLOCK * N_IBLOCKS + NUM_INODE_IN_BLOCK * NUM_INODE_IN_BLOCK) {
+			data_block_index = data_block_index - N_DBLOCKS - NUM_INODE_IN_BLOCK * N_IBLOCKS;
+			int new_data_block;
+			new_data_block = sb->free_block;
+			sb->free_block = get_next_free_block(sb->free_block);
+			int i2block_offset = (data_block_index) / NUM_INODE_IN_BLOCK;
+			void *i2block_buffer = malloc(BLOCK_SIZE);
+			// read data block of i2block
+			lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + inode_of_file->i2block * BLOCK_SIZE, SEEK_SET);
+			read(disk, i2block_buffer, BLOCK_SIZE);
+			int *i2block_inode = (int *)i2block_buffer;
+			// calculate index and offset in the given i1block
+			int i1block_index = i2block_inode[i2block_offset];
+			int i1block_offset = (data_block_index) % NUM_INODE_IN_BLOCK;
+			if (i1block_offset == 0) {
+				int new_data_block_for_i1;
+				new_data_block_for_i1 = sb->free_block;
+				sb->free_block = get_next_free_block(sb->free_block);
+				i2block_inode[i2block_offset] = new_data_block_for_i1;
+				// write new_Data_block to the new i1block
+				void *i1block_buffer = malloc(BLOCK_SIZE);
+				lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + new_data_block_for_i1 * BLOCK_SIZE, SEEK_SET);
+				read(disk, i1block_buffer, BLOCK_SIZE);
+				int *inode_i1bloc = NULL;
+				inode_i1bloc = (int *)(i1block_buffer);
+				inode_i1bloc[0] = new_data_block;
+				lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + new_data_block_for_i1 * BLOCK_SIZE, SEEK_SET);
+				write(disk, i1block_buffer, BLOCK_SIZE);
+				lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + inode_of_file->i2block * BLOCK_SIZE, SEEK_SET);
+				write(disk, i2block_buffer, BLOCK_SIZE);
+				std::free(i1block_buffer);
+			}
+			else {
+				void *i1block_buffer = malloc(BLOCK_SIZE);
+				lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + i1block_index * BLOCK_SIZE, SEEK_SET);
+				read(disk, i1block_buffer, BLOCK_SIZE);
+				int *inode_i1bloc = NULL;
+				inode_i1bloc = (int *)(i1block_buffer);
+				inode_i1bloc[i1block_offset] = new_data_block;
+				lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + i1block_index * BLOCK_SIZE, SEEK_SET);
+				write(disk, i1block_buffer, BLOCK_SIZE);
+				std::free(i1block_buffer);				
+			}
+			block_to_write = new_data_block;
+			lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + block_to_write * BLOCK_SIZE, SEEK_SET);
+			transfer_buffer = (void*) ((char*) rounded_buffer + i * BLOCK_SIZE);
+			write(disk, transfer_buffer, BLOCK_SIZE);
+			starting_size += BLOCK_SIZE;
+			std::free(i2block_buffer);
+		}
+		else if (data_block_index < N_DBLOCKS + NUM_INODE_IN_BLOCK * N_IBLOCKS + NUM_INODE_IN_BLOCK * NUM_INODE_IN_BLOCK) {
+			data_block_index = data_block_index - N_DBLOCKS - NUM_INODE_IN_BLOCK * N_IBLOCKS - NUM_INODE_IN_BLOCK * NUM_INODE_IN_BLOCK;
+			int new_data_block;
+			new_data_block = sb->free_block;
+			sb->free_block = get_next_free_block(sb->free_block);			
+			// calculate which i2block we will step into
+			int i3block_offset = (data_block_index) / (NUM_INODE_IN_BLOCK * NUM_INODE_IN_BLOCK);
+			// read the data block of i3block
+			void *i3block_buffer = malloc(BLOCK_SIZE);
+			lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + inode_of_file->i3block * BLOCK_SIZE, SEEK_SET);
+			read(disk, i3block_buffer, BLOCK_SIZE);
+			int *i3block_inode = (int *)i3block_buffer;
+
+			// calculate which i1block we will step into
+			int i2block_index = i3block_inode[i3block_offset];
+			int i2block_offset = (data_block_index) % (NUM_INODE_IN_BLOCK * NUM_INODE_IN_BLOCK);
+			i2block_offset = i2block_offset / NUM_INODE_IN_BLOCK;
+
+			// read the data block of i2block
+			void *i2block_buffer = malloc(BLOCK_SIZE);
+			lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + i2block_index * BLOCK_SIZE, SEEK_SET);
+			read(disk, i2block_buffer, BLOCK_SIZE);
+			int *i2block_inode = (int *)i2block_buffer;
+
+			// calculate which data block of i1block we will step into
+			int i1block_index = i2block_inode[i2block_offset];
+			int i1block_offset = (data_block_index) % NUM_INODE_IN_BLOCK;
+
+			void *i1block_buffer = malloc(BLOCK_SIZE);
+			// read data block from i1block
+			lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + i1block_index * BLOCK_SIZE, SEEK_SET);
+			read(disk, i1block_buffer, BLOCK_SIZE);
+			int *inode_i1bloc = NULL;
+			inode_i1bloc = (int *)(i1block_buffer);
+
+			if (i1block_offset == 0) {
+				int new_data_block_for_i1;
+				new_data_block_for_i1 = sb->free_block;
+				sb->free_block = get_next_free_block(sb->free_block);
+				std::free(i1block_buffer);
+				i1block_buffer = malloc(BLOCK_SIZE);
+				lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + new_data_block_for_i1 * BLOCK_SIZE, SEEK_SET);
+				read(disk, i1block_buffer, BLOCK_SIZE);
+				int *inode_i1bloc = NULL;
+				inode_i1bloc = (int *)(i1block_buffer);
+				inode_i1bloc[0] = new_data_block;
+				lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + new_data_block_for_i1 * BLOCK_SIZE, SEEK_SET);
+				write(disk, i1block_buffer, BLOCK_SIZE);
+				// we need a new i2block
+				// check whether i2block can hold one more i1block
+				if ((data_block_index) % (NUM_INODE_IN_BLOCK * NUM_INODE_IN_BLOCK) == 0){
+					int new_data_block_for_i2;
+					new_data_block_for_i2 = sb->free_block;
+					sb->free_block = get_next_free_block(sb->free_block);
+					i3block_inode[i3block_offset] = new_data_block_for_i2;
+					std::free(i2block_buffer);
+					i2block_buffer = malloc(BLOCK_SIZE);
+					lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + new_data_block_for_i2 * BLOCK_SIZE, SEEK_SET);
+					read(disk, i2block_buffer, BLOCK_SIZE);
+					int *inode_i2bloc = NULL;
+					inode_i2bloc = (int *)(i2block_buffer);
+					inode_i2bloc[0] = new_data_block_for_i1;
+					lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + new_data_block_for_i2 * BLOCK_SIZE, SEEK_SET);
+					write(disk, i2block_buffer, BLOCK_SIZE);
+					lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + inode_of_file->i3block * BLOCK_SIZE, SEEK_SET);
+					write(disk, i3block_buffer, BLOCK_SIZE);
+				}
+				else {
+					i2block_inode[i2block_offset] = new_data_block_for_i1;
+					lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + i2block_index * BLOCK_SIZE, SEEK_SET);
+					write(disk, i2block_buffer, BLOCK_SIZE);
+				}
+			}
+			else {
+				std::free(i1block_buffer);
+				i1block_buffer = malloc(BLOCK_SIZE);
+				lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + i1block_index * BLOCK_SIZE, SEEK_SET);
+				read(disk, i1block_buffer, BLOCK_SIZE);
+				int *inode_i1bloc = NULL;
+				inode_i1bloc = (int *)(i1block_buffer);
+				inode_i1bloc[i1block_offset] = new_data_block;
+				lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + i1block_index * BLOCK_SIZE, SEEK_SET);
+				write(disk, i1block_buffer, BLOCK_SIZE);				
+			}
+			block_to_write = new_data_block;
+			lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + block_to_write * BLOCK_SIZE, SEEK_SET);
+			transfer_buffer = (void*) ((char*) rounded_buffer + i * BLOCK_SIZE);
+			write(disk, transfer_buffer, BLOCK_SIZE);
+			starting_size += BLOCK_SIZE;
+			std::free(i1block_buffer);
+			std::free(i2block_buffer);
+			std::free(i3block_buffer);
+		}
+		curr_block = block_to_write;
+	}
+
+	int return_value = starting_size - padding - (target_file->block_offset - 1) * BLOCK_SIZE + curr_offset;
+	if ((target_file->block_offset - 1) * BLOCK_SIZE + num_byte_need_to_copy > inode_of_file->size) {
+		inode_of_file->size = (target_file->block_offset - 1) * BLOCK_SIZE + num_byte_need_to_copy;
+		lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->inode_offset * BLOCK_SIZE + target_file->inode_entry * sizeof(inode), SEEK_SET);
+		write(disk, inode_of_file, sizeof(inode));
+	}
+	if (padding == 0) {
+		target_file->block_offset = starting_size / BLOCK_SIZE + 1;
+	}
+	else {
+		target_file->block_offset = starting_size / BLOCK_SIZE;
+	}
+	target_file->block_index = curr_block;
+	target_file->byte_offset = (BLOCK_SIZE - padding) % BLOCK_SIZE;
+
+	return return_value;
 }
+
+
+
+
 
 // f_close needs to take of closing a normal file or a directory (maybe).
 // Not tested yet. Maybe buggy!!!!!!!!
