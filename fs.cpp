@@ -1859,7 +1859,7 @@ int f_stat(int fd, struct fileStat *info)
 	return SUCCESS;
 }
 
-int create_file(const string filename, int parent_inode, int type)
+int create_file(const string filename, int parent_inode, int type, int mode)
 {
 	if (num_of_open_file > MAX_OPEN_FILE)
 	{
@@ -1877,7 +1877,7 @@ int create_file(const string filename, int parent_inode, int type)
 
 	// update inode info in memory
 	disk_inode_region[cur_free_inode]->nlink = 1;
-	disk_inode_region[cur_free_inode]->permission = 7;
+	disk_inode_region[cur_free_inode]->permission = mode;
 	disk_inode_region[cur_free_inode]->type = type;
 	disk_inode_region[cur_free_inode]->parent = parent_inode;
 	disk_inode_region[cur_free_inode]->size = 0;
