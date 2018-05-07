@@ -1332,6 +1332,8 @@ int create_file(const string filename, int parent_inode, int type)
 				int *inode_i1bloc = NULL;
 				inode_i1bloc = (int *)(i1block_buffer);
 				inode_i1bloc[0] = new_data_block;
+				// set the file indicator back to where it was, shit
+				lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + parent->iblocks[i1block_index] * BLOCK_SIZE, SEEK_SET);
 				write(disk, i1block_buffer, BLOCK_SIZE);
 				std::free(i1block_buffer);
 			}
@@ -1343,6 +1345,7 @@ int create_file(const string filename, int parent_inode, int type)
 				int *inode_i1bloc = NULL;
 				inode_i1bloc = (int *)(i1block_buffer);
 				inode_i1bloc[i1block_offset + 1] = new_data_block;
+				lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + parent->iblocks[i1block_index] * BLOCK_SIZE, SEEK_SET);
 				write(disk, i1block_buffer, BLOCK_SIZE);
 				std::free(i1block_buffer);
 			}
@@ -1392,6 +1395,7 @@ int create_file(const string filename, int parent_inode, int type)
 				int *inode_i1bloc = NULL;
 				inode_i1bloc = (int *)(i1block_buffer);
 				inode_i1bloc[0] = new_data_block;
+				lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + new_data_block_for_i1 * BLOCK_SIZE, SEEK_SET);
 				write(disk, i1block_buffer, BLOCK_SIZE);
 				lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + parent->i2block * BLOCK_SIZE, SEEK_SET);
 				write(disk, i2block_buffer, BLOCK_SIZE);
@@ -1405,6 +1409,7 @@ int create_file(const string filename, int parent_inode, int type)
 				int *inode_i1bloc = NULL;
 				inode_i1bloc = (int *)(i1block_buffer);
 				inode_i1bloc[i1block_offset + 1] = new_data_block;
+				lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + i1block_index * BLOCK_SIZE, SEEK_SET);
 				write(disk, i1block_buffer, BLOCK_SIZE);
 				std::free(i1block_buffer);
 			}			
@@ -1483,6 +1488,7 @@ int create_file(const string filename, int parent_inode, int type)
 					int *inode_i2bloc = NULL;
 					inode_i2bloc = (int *)(i2block_buffer);
 					inode_i2bloc[0] = new_data_block_for_i1;
+					lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + new_data_block_for_i2 * BLOCK_SIZE, SEEK_SET);
 					write(disk, i2block_buffer, BLOCK_SIZE);
 					lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + parent->i3block * BLOCK_SIZE, SEEK_SET);
 					write(disk, i3block_buffer, BLOCK_SIZE);					
@@ -1498,6 +1504,7 @@ int create_file(const string filename, int parent_inode, int type)
 					int *inode_i1bloc = NULL;
 					inode_i1bloc = (int *)(i1block_buffer);
 					inode_i1bloc[0] = new_data_block;
+					lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + new_data_block_for_i1 * BLOCK_SIZE, SEEK_SET);
 					write(disk, i1block_buffer, BLOCK_SIZE);
 					lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + i2block_index * BLOCK_SIZE, SEEK_SET);
 					write(disk, i2block_buffer, BLOCK_SIZE);
@@ -1512,6 +1519,7 @@ int create_file(const string filename, int parent_inode, int type)
 				int *inode_i1bloc = NULL;
 				inode_i1bloc = (int *)(i1block_buffer);
 				inode_i1bloc[i1block_offset + 1] = new_data_block;
+				lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + i1block_index * BLOCK_SIZE, SEEK_SET);
 				write(disk, i1block_buffer, BLOCK_SIZE);
 				std::free(i1block_buffer);
 			}
