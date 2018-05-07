@@ -26,13 +26,14 @@ int get_next_free_block(int block_index);
 
 //testing function
 void print_file_table();
-
+void print_file_status(int fd);
 
 // update root in superblock, update inode, open root directory
 
 int f_mount(char* destination, char* diskname) {
 	int fd;
 	fd = open(diskname, O_RDWR);
+	disk = fd;
 	if (fd == -1) {
 		fd = format_default_size(diskname);
 		if (fd == -1) {
@@ -81,6 +82,7 @@ int f_unmount(char* diskname) {
 		free(disk_inode_region[i]);
 	}
 	free(sb);
+	close(disk);
 	return SUCCESS;
 }
 
@@ -1363,13 +1365,15 @@ size_t f_read(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 	int i = 0; // keep track of where to append the buffer.
 	void* tmp_ptr = restrict_ptr;
 	// potential buggy while loop!!!!!!!!!!!!!!!!!!!!!!
+	print_file_status(fd);
 	printf("remaining_size is %d\n",remaining_size);
-	while (remaining_size <=0) {
+	while (remaining_size >0) {
 		if (lseek(disk, data_region_starting_addr + BLOCK_SIZE * block_index + byte_offset, SEEK_SET) == FAIL) {
 			printf("[lseek in f_read] Fails");
 			return FAIL;
 		}
 		if (byte_offset != 0) {
+			printf("the byte offset is not 0\n");
 			int bytes_read = BLOCK_SIZE - byte_offset;
 			read(disk, restrict_ptr, bytes_read);
 			byte_offset = 0; // reset the byte offset
@@ -1381,7 +1385,8 @@ size_t f_read(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 			// and byte offset of the target_file, and update the open file table.
 			if (0 < remaining_size && remaining_size <= BLOCK_SIZE) {
 				tmp_ptr  = (void*)((char*)restrict_ptr + tmp + BLOCK_SIZE * i);
-				read(disk, tmp_ptr, remaining_size);
+				int test = read(disk, tmp_ptr, remaining_size);
+				printf("the test tmp_ptr now is %s and %d\n",(char*)tmp_ptr,test);
 				byte_offset = remaining_size; // since the last block has the byte offset to be 0, the new byte offset will be remaining size - 0
 				target_file->byte_offset = byte_offset; // update byte_offset
 				target_file->block_offset = block_offset; // update block_offset
@@ -1390,7 +1395,8 @@ size_t f_read(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 				return size_requested;
 			} else {
 				tmp_ptr  = (void*)((char*)restrict_ptr + tmp + BLOCK_SIZE * i);
-				read(disk, tmp_ptr, BLOCK_SIZE);
+				int test = read(disk, tmp_ptr, BLOCK_SIZE);
+				printf("the test tmp_ptr now is %s and %d\n",(char*)tmp_ptr,test);
 				byte_offset = 0; // reset the byte offset
 				block_offset ++; // increment the block offset by 1
 				block_index = get_index_by_offset(file_inode, block_offset); // use the func to get the next block index.
@@ -1794,16 +1800,19 @@ int get_next_free_block(int block_index) {
 	return result;
 }
 
+void print_file_status(int fd) {
+	  printf("the %d th element, inode_entry is %d\n",fd,open_file_table[fd]->inode_entry);
+	  printf("the %d th element, block_index is %d\n",fd,open_file_table[fd]->block_index);
+	  printf("the %d th element, block_offset is %d\n",fd,open_file_table[fd]->block_offset);
+	  printf("the %d th element, byte_offset is %d\n",fd,open_file_table[fd]->byte_offset);
+	  printf("the %d th element, mode is %d\n",fd,open_file_table[fd]->mode);
+}
 void print_file_table() {
 	if(open_file_table[0] == NULL) {
 		printf("not initialized yet\n");
 		return;
 	}
 	for(int i = 0; i < MAX_OPEN_FILE; i++) {
-	  printf("the %d th element, inode_entry is %d\n",i,open_file_table[i]->inode_entry);
-	  printf("the %d th element, block_index is %d\n",i,open_file_table[i]->block_index);
-	  printf("the %d th element, block_offset is %d\n",i,open_file_table[i]->block_offset);
-	  printf("the %d th element, byte_offset is %d\n",i,open_file_table[i]->byte_offset);
-	  printf("the %d th element, mode is %d\n",i,open_file_table[i]->mode);
+		print_file_status(i);
 	}
 }

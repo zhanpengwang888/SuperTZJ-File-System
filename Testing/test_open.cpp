@@ -127,7 +127,7 @@ int main() {
 	f_mount("/","test");
 	int test_fd = f_open("/test.txt","r");
 	char* test_buffer = (char*) malloc(BLOCK_SIZE);
-	int out_size = f_read(test_buffer,10,1,test_fd) >0;
+	int out_size = f_read(test_buffer,1000,1,test_fd);
 	if(out_size > 0) {
 		printf("test_buffer's size is %d, content %s\n",out_size,test_buffer); 
 	}
