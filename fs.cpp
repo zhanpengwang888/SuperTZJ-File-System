@@ -1,4 +1,5 @@
 #include "fs.h"
+#include "Testing/test_util.h"
 
 Superblock *sb; // super block
 file_node *open_file_table[MAX_OPEN_FILE];
@@ -49,7 +50,7 @@ int f_mount(char* destination, char* diskname) {
 	filesize = lseek(fd, 0, SEEK_END);
 	//filesize = ftell(fd);
 	lseek(fd, 0, SEEK_SET);
-	printf("the total size of this file is %lld\n",filesize);
+	//printf("the total size of this file is %lld\n",filesize);
 	num_of_total_inode = (sb->data_offset - sb->inode_offset) * BOOT_SIZE / sizeof(inode);
 	
 	for (int i = 0; i < num_of_total_inode; ++i) {
@@ -247,8 +248,8 @@ int format_default_size(string filename)
 	lseek(fd, BOOT_SIZE + SUPER_SIZE + sb->data_offset*BLOCK_SIZE, SEEK_SET);
 	read(fd,test_buffer,BLOCK_SIZE);
 	directory_entry* entry_table = (directory_entry*)test_buffer;
-	cout << "from file:" << entry_table[0].file_name << entry_table[1].inode_entry << endl;
-	cout << "from file:" << entry_table[1].file_name << entry_table[1].inode_entry << endl;
+	//cout << "from file:" << entry_table[0].file_name << entry_table[1].inode_entry << endl;
+	//cout << "from file:" << entry_table[1].file_name << entry_table[1].inode_entry << endl;
 	std::free(default_inode);
 	free(root_inode);
 	//close(fd);
@@ -963,7 +964,7 @@ int add_to_file_table(int inode_num, inode *f_node,int mode)
 		{
 			open_file_table[i]->inode_entry = inode_num;
 			open_file_table[i]->block_index = f_node->dblocks[0];
-			open_file_table[i]->block_offset = 0;
+			open_file_table[i]->block_offset = 1;
 			open_file_table[i]->byte_offset = 0;
 			open_file_table[i]->mode = mode;
 			break;
@@ -1193,16 +1194,28 @@ int f_remove(const string path) {
 	else {
 		for (int k = 0; k < MAX_OPEN_FILE; k++) {
 			if (open_file_table[k]->inode_entry == dir_node) {
+				printf("please close the file before removing it\n");
 				return EXIT_FAILURE;  //file can not be removed if it is open
 			}
 		}
 	}
-
 	//if it exists, get the inode pointer
 	inode *target = disk_inode_region[dir_node];
+	//test printing before clean
+	printf("This is f_remove test printing!########################\n");
+	print_superblock(sb);
+	print_inode(target,dir_node,1);
+
+	//superblock not be updated when create file
 	clean_file(target);
 	clean_inode(target, dir_node);
 	update_sb();
+
+	//test printing
+	print_superblock(sb);
+	print_inode(target,dir_node,1);
+	printf("next free inode is %d\n",target->next_inode);
+
 	return SUCCESS;
 
 }
@@ -1246,7 +1259,7 @@ int f_open(const string restrict_path, const string restrict_mode)
 			break;
 		}
 	}
-	printf("the dir_node of this file is %d\n",dir_node);
+	//printf("the dir_node of this file is %d\n",dir_node);
 	if (dir_node == -1) {
 		if (counter != path_list.size() - 1) {
 			return EXIT_FAILURE;
@@ -1284,7 +1297,7 @@ int f_open(const string restrict_path, const string restrict_mode)
 		result = add_to_file_table(dir_node, target,RDONLY);
 	else
 		result = add_to_file_table(dir_node, target,WRONLY);
-	print_file_table();
+	//print_file_table();
 	//we also need to deal with open_file_table, have a function to add and remove element in open file table
 
 	// if we open a existed file with "w", we need to update its inode information -- one problem, if not change correspond data blocks, those data blocks will be lost
@@ -1313,9 +1326,11 @@ int f_open(const string restrict_path, const string restrict_mode)
 			int block_offset = target->size/BLOCK_SIZE + 1;
 			int byte_offset = target->size%BLOCK_SIZE;
 			int block_index = get_index_by_offset(target,block_offset);
+			printf("block_index we have is %d\n",block_index);
 			open_file_table[result]->block_index = block_index;
 			open_file_table[result]->block_offset = block_offset;
 			open_file_table[result]->byte_offset = byte_offset;
+			print_file_status(result);
 		}
 	}
 
@@ -1366,6 +1381,7 @@ size_t f_read(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 	void* tmp_ptr = restrict_ptr;
 	// potential buggy while loop!!!!!!!!!!!!!!!!!!!!!!
 	print_file_status(fd);
+	printf("This is f_read test printing!**************************\n");
 	printf("remaining_size is %d\n",remaining_size);
 	while (remaining_size >0) {
 		if (lseek(disk, data_region_starting_addr + BLOCK_SIZE * block_index + byte_offset, SEEK_SET) == FAIL) {
@@ -1392,6 +1408,8 @@ size_t f_read(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 				target_file->block_offset = block_offset; // update block_offset
 				target_file->block_index = block_index; // update block_index
 				open_file_table[fd] = target_file; // put the new file node into the open file table.
+				//testing print
+				print_file_status(fd);
 				return size_requested;
 			} else {
 				tmp_ptr  = (void*)((char*)restrict_ptr + tmp + BLOCK_SIZE * i);
@@ -1453,8 +1471,12 @@ int f_close(int fd)
 	target_file->inode_entry = -1; // change the inode entry to -1
 	target_file->block_index = 0; // reset it back to 0.
 	target_file->block_offset = 0;
+	target_file->byte_offset = 0;
 	target_file->mode = 0;
 	open_file_table[fd] = target_file; // put the modified file node back into the open file table.
+	//test printing
+	printf("This is f_close test printing!**************************\n");
+	print_file_status(fd);
 	return SUCCESS;
 }
 

@@ -9,7 +9,10 @@ char* file_buffer;
 Superblock *sp; // super block
 //file_node *open_file_table[MAX_OPEN_FILE];
 inode *disk_inode_list[MAX_INODE_NUM];
-
+void update_sp() {
+	fseek(fp,BOOT_SIZE,SEEK_SET);
+	fwrite(sp,sizeof(Superblock),1,fp);
+}
 void create_node(inode* test_inode, int index, int size, string name){
 	test_inode->nlink = 1;
 	test_inode->permission = 7;
@@ -73,7 +76,7 @@ void create_test_file(char* name) {
 	inode *test_inode = (inode *)malloc(sizeof(inode));
 	char* f_name = "test.txt";
 	create_node(test_inode,1,s_size,"test.txt");
-	print_inode(test_inode,1,1);
+	//print_inode(test_inode,1,1);
 	//write inode into disk
 	fseek(fp,inode_start+1*INODE_SIZE,SEEK_SET);
 	fwrite(test_inode,INODE_SIZE,1,fp);
@@ -92,8 +95,8 @@ void create_test_file(char* name) {
  	directory_entry* root_table = (directory_entry*)(root_block);
  	strcpy(root_table[2].file_name, f_name);
  	root_table[2].inode_entry = 1;
- 	cout << root_table[2].file_name << root_table[2].inode_entry << endl;
- 	cout << root_table[1].file_name << root_table[1].inode_entry << endl;
+ 	//cout << root_table[2].file_name << root_table[2].inode_entry << endl;
+ 	//cout << root_table[1].file_name << root_table[1].inode_entry << endl;
 	if(fseek(fp, r_address,SEEK_SET) < 0) {
       perror("lseek fails\n");
       return;
@@ -107,14 +110,25 @@ void create_test_file(char* name) {
  	fseek(fp, 0, SEEK_SET);
  	t_size = fread(file_buffer, size, 1,fp);
  	print_directory(sp,root,file_buffer);
+
  	//print the test_block
- 	fseek(fp,data_address,SEEK_SET);
- 	fread(test_block,BLOCK_SIZE,1,fp);
- 	cout << test_block << endl;
+ 	// fseek(fp,data_address,SEEK_SET);
+ 	// fread(test_block,BLOCK_SIZE,1,fp);
+ 	// cout << test_block << endl;
   //read from the file descriptor
 	
+ 	//update the superblock into the disk
+ 	sp->free_inode = 2;
+ 	sp->free_block = 2;
+ 	//print_superblock(sp);
+ 	update_sp();
 
-
+ 	//test update_sp();
+ 	fseek(fp, 0, SEEK_SET);
+ 	t_size = fread(file_buffer, size, 1,fp);
+ 	sp = (Superblock*)(file_buffer + BOOT_SIZE);
+ 	print_superblock(sp);
+ 	fclose(fp);
 
 
 }
@@ -125,11 +139,24 @@ int main() {
 	create_test_file("test");
 	//assume mount to root directory
 	f_mount("/","test");
+	/*
+	//test F_open read mode
 	int test_fd = f_open("/test.txt","r");
 	char* test_buffer = (char*) malloc(BLOCK_SIZE);
-	int out_size = f_read(test_buffer,1000,1,test_fd);
+	int out_size = f_read(test_buffer,500,1,test_fd);
 	if(out_size > 0) {
 		printf("test_buffer's size is %d, content %s\n",out_size,test_buffer); 
 	}
+	f_close(test_fd);
+	out_size = f_read(test_buffer,500,1,test_fd);
+	printf("out size is %d\n",out_size);
+	*/
+	int test_fd = f_open("/test.txt","a");
+	f_close(test_fd);
+	f_remove("/test.txt");
+	// int data_address = inode_end + 1 * BLOCK_SIZE;
+	// fseek(fp,data_address,SEEK_SET);
+	// fread(test_block,BLOCK_SIZE,1,fp);
+ // 	cout << test_block << endl;'
 	return 0;
 }
