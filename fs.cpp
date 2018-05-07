@@ -36,14 +36,14 @@ int f_mount(char* destination, char* diskname) {
 			return EXIT_FAILURE;
 		}
 		else {
-			open(fd, O_RDWR);
+			open(diskname, O_RDWR);
 		}
 	}
-	sb->root = destination;
-	long int filesize = 0;
-	fseek(fd, 0, SEEK_END);
-	filesize = ftell(fd);
-	fseek(fd, 0, SEEK_SET);
+	//sb->root = destination;
+	//long int filesize = 0;
+	//fseek(fd, 0, SEEK_END);
+	//filesize = ftell(fd);
+	//fseek(fd, 0, SEEK_SET);
 	num_of_total_inode = (sb->data_offset - sb->inode_offset) * BOOT_SIZE / sizeof(inode);
 	
 	for (int i = 0; i < num_of_total_inode; ++i) {
@@ -52,8 +52,8 @@ int f_mount(char* destination, char* diskname) {
 		read(fd, disk_inode_region[i], sizeof(inode));
 	}
 	disk_inode_region[0]->nlink = 1;
-	disk_inode_region[0]->filename = destination;
-	fseek(fd, BOOT_SIZE + SUPER_SIZE, SEEK_SET);
+	disk_inode_region[0]->file_name = destination;
+	lseek(fd, BOOT_SIZE + SUPER_SIZE, SEEK_SET);
 	write(fd, disk_inode_region[0], sizeof(inode));
 	for (int i = 0; i < MAX_OPEN_FILE; i++) {
 		open_file_table[i] = malloc(sizeof(file_node));
@@ -69,15 +69,15 @@ int f_unmount(char* diskname) {
 	for (int i = 0; i < MAX_OPEN_FILE; i++) {
 		free(open_file_table[i]);
 	}
-	
 	num_of_total_inode = (sb->data_offset - sb->inode_offset) * BOOT_SIZE / sizeof(inode);
 	for (int i = 0; i < num_of_total_inode; ++i) {
 		free(disk_inode_region[i]);
 	}
-
 	free(sb);
+	return SUCCESS;
 }
 */
+
 void create_root_dir(inode* rt_node) {
   printf("I am here\n");
   size_t data_address = BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE;
@@ -427,7 +427,7 @@ int f_seek(int fd, long int offset, char* whence) {
 
 
 void rewind(int fd) {
-	if (fd < 0 or fd > MAX_OPEN_FILE) {
+	if (fd < 0 || fd > MAX_OPEN_FILE) {
 		return EXIT_FAILURE;
 	}
 	file_node* cur_file = open_file_table[fd];
@@ -447,7 +447,7 @@ void rewind(int fd) {
 		cur_file->block_offset = 0;
 		cur_file->byte_offset = 0;
 	}
-	return EXIT_SUCCESS;
+	// return EXIT_SUCCESS;
 }
 */
 void clean_inode(inode* cur, int index) {
@@ -693,24 +693,29 @@ void clean_file(inode* f_node) {
   clean_block(f_node->i3block);
 }
 
-struct dirent *f_opendir(char *path)
+int *f_opendir(string path)
 {
 	//we can directly use f_open to do this
 }
 
+// Need implementation
+directory_entry *f_readdir(int dirfd) {
+	return NULL;
+}
+
 // Need implementation.
 int f_closedir(int dirfd) {
-
+	return SUCCESS;
 }
 
 // Need implementation.
 int f_mkdir(string path, int mode) {
-
+	return SUCCESS;
 }
 
 // Need implementation.
 int f_rmdir(string filepath) {
-
+	return SUCCESS;
 }
 
 //http://ysonggit.github.io/coding/2014/12/16/split-a-string-using-c.html for split
@@ -789,11 +794,11 @@ int traverse_dir(int dirinode_index, string filename, bool isLast)
 			{
 				return entry->inode_entry;
 			}
-			else if (remaining_size <= 0)
+			remaining_size -= sizeof(directory_entry); // reducing the remaining size by 32 bytes.
+			if (remaining_size <= 0)
 			{
 				return FAIL;
 			}
-			remaining_size -= sizeof(directory_entry); // reducing the remaining size by 32 bytes.
 		}
 	}
 	// if the remaining_size is not 0, we still need to look into other data blocks.
@@ -824,11 +829,11 @@ int traverse_dir(int dirinode_index, string filename, bool isLast)
 				{
 					return entry->inode_entry;
 				}
-				else if (remaining_size <= 0)
+				remaining_size -= sizeof(directory_entry);
+				if (remaining_size <= 0)
 				{
 					return FAIL;
 				}
-				remaining_size -= sizeof(directory_entry);
 			}
 		}
 	}
@@ -866,11 +871,11 @@ int traverse_dir(int dirinode_index, string filename, bool isLast)
 				{
 					return entry->inode_entry;
 				}
-				else if (remaining_size <= 0)
+				remaining_size -= sizeof(directory_entry);
+				if (remaining_size <= 0)
 				{
 					return FAIL;
 				}
-				remaining_size -= sizeof(directory_entry);
 			}
 		}
 	}
@@ -919,11 +924,11 @@ int traverse_dir(int dirinode_index, string filename, bool isLast)
 					{
 						return entry->inode_entry;
 					}
-					else if (remaining_size <= 0)
+					remaining_size -= sizeof(directory_entry);
+					if (remaining_size <= 0)
 					{
 						return FAIL;
 					}
-					remaining_size -= sizeof(directory_entry);
 				}
 			}
 		}
