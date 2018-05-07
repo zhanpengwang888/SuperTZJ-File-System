@@ -20,7 +20,7 @@ int get_index(int indirect_idx, int offset);
 int get_index_by_offset(inode* f_node, int offset);
 void clean_file(inode* f_node);
 vector<string> split(const string &s, char delim);
-int add_to_file_table(int inode_num, inode *f_node);
+int add_to_file_table(int inode_num, inode *f_node,int mode);
 int traverse_dir(int dirinode_index, string filename, bool isLast);
 int get_next_free_block(int block_index);
 
@@ -910,7 +910,7 @@ int f_opendir(string path)
 	}
 	// now let's add it into the open file table
 	inode *target_directory = disk_inode_region[dir_node];
-	int dirfd = add_to_file_table(dir_node, target_directory); // add it into the open file table
+	int dirfd = add_to_file_table(dir_node, target_directory,RDONLY); // add it into the open file table
 	return dirfd;
 }
 
@@ -951,7 +951,7 @@ vector<string> split(const string &s, char delim)
 	return tokens;
 }
 
-int add_to_file_table(int inode_num, inode *f_node)
+int add_to_file_table(int inode_num, inode *f_node,int mode)
 {
 	//get the inode from inode region
 	int i;
@@ -963,6 +963,7 @@ int add_to_file_table(int inode_num, inode *f_node)
 			open_file_table[i]->block_index = f_node->dblocks[0];
 			open_file_table[i]->block_offset = 0;
 			open_file_table[i]->byte_offset = 0;
+			open_file_table[i]->mode = mode;
 			break;
 		}
 	}
@@ -1276,7 +1277,11 @@ int f_open(const string restrict_path, const string restrict_mode)
 	*/
 	inode *target = disk_inode_region[dir_node];
 	//if not in the file table, add an new element in it
-	int result = add_to_file_table(dir_node, target);
+	int result;
+	if(restrict_mode == "r")
+		result = add_to_file_table(dir_node, target,RDONLY);
+	else
+		result = add_to_file_table(dir_node, target,WRONLY);
 	print_file_table();
 	//we also need to deal with open_file_table, have a function to add and remove element in open file table
 
@@ -1327,7 +1332,7 @@ size_t f_read(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 		printf("This file has not been opened.\n");
 		return FAIL;
 	} else if (target_file->mode != RDONLY) {
-		printf("Permission Denied.\n");
+		printf("Permission Denied!!!!!\n");
 		return FAIL;
 	} else if (size <= 0 || nitems <=0) {
 		printf("Invalid size or nitems.\n");
@@ -1358,6 +1363,7 @@ size_t f_read(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 	int i = 0; // keep track of where to append the buffer.
 	void* tmp_ptr = restrict_ptr;
 	// potential buggy while loop!!!!!!!!!!!!!!!!!!!!!!
+	printf("remaining_size is %d\n",remaining_size);
 	while (remaining_size <=0) {
 		if (lseek(disk, data_region_starting_addr + BLOCK_SIZE * block_index + byte_offset, SEEK_SET) == FAIL) {
 			printf("[lseek in f_read] Fails");
