@@ -6,6 +6,8 @@ int main() {
 	string name = "test";
 	format_default_size(name);
 	FILE* fp_r = fopen("test", "r");
+	if(fp_r == NULL)
+		perror("Error");
 	char* buffer = (char*) malloc(DEFAULT_SIZE);
 	int t_size = fread(buffer,DEFAULT_SIZE,1,fp_r);
 	// if(t_size <= 0)

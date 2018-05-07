@@ -67,6 +67,23 @@ int f_unmount(char* diskname) {
 	free(sb);
 }
 */
+void create_root_dir(inode* rt_node) {
+  size_t data_address = BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE;
+  //create buffer to index_table of indirect block
+  char* dir_buffer = (char*) malloc(sizeof(char) * BLOCK_SIZE);
+  //lseek to specific position of the disk image and read from it -- make sure disk is valid
+  if(lseek(disk, data_address,SEEK_SET) < 0)
+  	return;
+  //read from the file descriptor
+  read(disk,dir_buffer,BLOCK_SIZE);
+  directory_entry* entry_table = (directory_entry*)(dir_buffer); //here we need to read from disk image
+  entry_table[0].inode_entry = 0;
+  strcpy(entry_table[0].file_name,".");
+  entry_table[0].inode_entry = 0;
+  strcpy(entry_table[0].file_name,"..");
+  write(disk,entry_table,BLOCK_SIZE);
+  free(dir_buffer);
+}
 
 int format_default_size(string filename)
 {
@@ -90,8 +107,8 @@ int format_default_size(string filename)
 	sb->size = BLOCK_SIZE;
 	sb->inode_offset = 0;
 	sb->data_offset = DEFAULT_SIZE * INODE_RATE / BLOCK_SIZE;
-	sb->free_inode = 0;
-	sb->free_block = 0;
+	sb->free_inode = 1;
+	sb->free_block = 1;
 
 	num_of_total_data_block = (DEFAULT_SIZE - BOOT_SIZE - SUPER_SIZE - (sb->data_offset - sb->inode_offset) * BOOT_SIZE) / BOOT_SIZE;
 	//instead of fseek, we should use lseek for file descriptor
@@ -124,25 +141,59 @@ int format_default_size(string filename)
 	default_inode->gid = 0;
 	for (int i = 0; i < N_DBLOCKS; i++)
 	{
-		default_inode->dblocks[i] = 0;
+		default_inode->dblocks[i] = -1;
 	}
 
 	for (int i = 0; i < N_IBLOCKS; i++)
 	{
-		default_inode->iblocks[i] = 0;
+		default_inode->iblocks[i] = -1;
 	}
 
-	default_inode->i2block = 0;
-	default_inode->i3block = 0;
+	default_inode->i2block = -1;
+	default_inode->i3block = -1;
 	//can't directly assign, use strcpy
 	//default_inode->file_name = "";
 	std::strcpy(default_inode->file_name, "");
 	//default_inode->padding = 0;
 
+	//root directory inode
+	inode* root_inode = (inode *)malloc(sizeof(inode));
+	default_inode->nlink = 0;
+	default_inode->permission = RDONLY;
+	default_inode->type = DIRECTORY_FILE;
+	default_inode->next_inode = 1;
+	default_inode->size = sizeof(directory_entry) * 2; // for . and ..
+	default_inode->uid = 0;
+	default_inode->gid = 0;
+
+	for (int i = 0; i < N_DBLOCKS; i++)
+	{
+		if(i == 0)
+			root_inode->dblocks[i] = 0;
+		root_inode->dblocks[i] = -1;
+	}
+
+	for (int i = 0; i < N_IBLOCKS; i++)
+	{
+		root_inode->iblocks[i] = -1;
+	}
+
+	root_inode->i2block = -1;
+	root_inode->i3block = -1;
+	//root directory name is /
+	std::strcpy(root_inode->file_name, "/");
 	num_of_total_inode = (sb->data_offset - sb->inode_offset) * BOOT_SIZE / sizeof(inode);
 
 	for (int i = 0; i < num_of_total_inode; ++i)
 	{
+		//the first one will be root directory
+		if(i == 0) {
+			root_inode->next_inode = -1;
+			lseek(fd, BOOT_SIZE + SUPER_SIZE + sb->inode_offset * BLOCK_SIZE + i * sizeof(inode), SEEK_SET);
+			write(fd, root_inode, sizeof(inode));
+
+		}
+
 		if (i == num_of_total_inode - 1)
 		{
 			default_inode->next_inode = -1;
@@ -156,8 +207,9 @@ int format_default_size(string filename)
 			write(fd, default_inode, sizeof(inode));
 		}
 	}
-
+	create_root_dir(root_inode);
 	std::free(default_inode);
+	free(root_inode);
 	close(fd);
 	//need to replace by predefined
 	return 0;
@@ -1133,10 +1185,10 @@ int create_file(const string filename, int parent_inode, int type)
 		return EXIT_FAILURE;
 	}
 
-	unsigned long parent_size = disk_inode_region[parent_inode]->size;
-	unsigned long num_of_file_in_directory = parent_size / sizeof(directory_entry);
-	unsigned long data_block_index = (parent_size - 1) / BLOCK_SIZE; // avoide cases when parent_size is 512*n bytes
-	unsigned long data_block_offset = parent_size % BLOCK_SIZE;
+	long parent_size = disk_inode_region[parent_inode]->size;
+	long num_of_file_in_directory = parent_size / sizeof(directory_entry);
+	long data_block_index = (parent_size - 1) / BLOCK_SIZE; // avoide cases when parent_size is 512*n bytes
+	long data_block_offset = parent_size % BLOCK_SIZE;
 	int cur_free_inode = sb->free_inode;
 	int next_free_inode = disk_inode_region[cur_free_inode]->next_inode;
 	int file_descriptor = -1;
