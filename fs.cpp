@@ -1008,13 +1008,47 @@ directory_entry *f_readdir(int dirfd) {
 	return NULL;
 }
 
-// Need implementation.
+// f_closedir just needs to call f_close because we treat the directory as a file.
+// if f_close works, f_closedir should also works.
 int f_closedir(int dirfd) {
-	return SUCCESS;
+	return f_close(dirfd);
 }
 
-// Need implementation.
+// f_mkdir: 
+// if the directory already exists return Fail. Otherwise create a new directory.
+// Not Tested yet. Potential buggy.
 int f_mkdir(string path, int mode) {
+	if (path == "." || path == ".." || path == "/") {
+		cout << "Invalid directory name." << endl;
+		return FAIL;
+	} else if (mode != EXEONLY && mode != WRONLY && mode != RDONLY) {
+		cout << "Illege permission mode." << endl;
+		return FAIL;
+	}
+	//parse the path to know the filename
+	vector<string> path_list = split(path, '/');
+	for (int i = 0; i < path_list.size(); i++)
+	{
+		cout << "This element is " << path_list[i] << endl;
+	}
+	int dir_node = sb->root;
+	int parent_node; // to get the parent directory inode of the 
+	// check if the directory has already existed.
+	for (int i = 0; i < path_list.size(); i++){
+		parent_node = dir_node;
+		dir_node = traverse_directory(dir_node, path_list[i]);
+		if (dir_node != FAIL) {
+			cout << "The directory has already existed." << endl;
+			return FAIL;
+		}
+	}
+	// if it does not exist, create the new directory.
+	// using create_file by assuming this function is correct.
+	if (create_file(path_list[path_list.size()-1], parent_node, DIRECTORY_FILE, mode) == EXIT_FAILURE) {
+		cout << "Fail to create the new directory." << endl;
+		return FAIL;
+	}
+	// if created successfully, return Success.
 	return SUCCESS;
 }
 
@@ -1518,12 +1552,8 @@ size_t f_read(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 size_t f_write(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 	// Check if it is a valid file descriptor. Then, checking if the file is open or not.
 	// Next, check if the user has the right permission to write the file.
-	if (fd > MAX_OPEN_FILE) {
-		printf("Invalid file descriptor.\n");
-		return FAIL;		
-	}
 	file_node *target_file = open_file_table[fd]; // get the file
-	if (fd > MAX_OPEN_FILE) {
+	if (fd < 0 || fd > MAX_OPEN_FILE) {
 		printf("Invalid file descriptor.\n");
 		return FAIL;
 	} else if (target_file->inode_entry == -1) {
