@@ -1585,7 +1585,8 @@ int f_remove(const string path) {
 	//if it exists, get the inode pointer
 	inode *target = disk_inode_region[dir_node];
 	//check permission
-	if(target->permission != EXEONLY + WRONLY || target->permission != EXEONLY + WRONLY + RDONLY) {
+	//printf("the permission is %d\n",target->permission);
+	if(target->permission != (EXEONLY + WRONLY) && target->permission != (EXEONLY + WRONLY + RDONLY)) {
 		printf("Permission denied by our file system!\n");
 		return EXIT_FAILURE;
 	}
