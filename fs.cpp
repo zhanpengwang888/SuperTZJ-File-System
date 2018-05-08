@@ -2043,7 +2043,8 @@ size_t f_read(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 	printf("remaining_size is %d\n",remaining_size);
 	while (remaining_size >0) {
 		if (lseek(disk, data_region_starting_addr + BLOCK_SIZE * block_index + byte_offset, SEEK_SET) == FAIL) {
-			printf("[lseek in f_read] Fails");
+			print_file_status(fd);
+			perror("[lseek in f_read] Fails");
 			return FAIL;
 		}
 		if (byte_offset != 0) {

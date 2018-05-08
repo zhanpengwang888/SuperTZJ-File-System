@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <cstring>
+#include <errno.h>
 //added Sat 12pm -- flag problem
 #include <unistd.h>
 #include <sys/stat.h> 
