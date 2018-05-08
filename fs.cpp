@@ -453,31 +453,12 @@ int f_seek(int fd, long int offset, char* whence) {
 	return EXIT_SUCCESS;
 }
 
-/*
+
 void rewind(int fd) {
-	if (fd < 0 || fd > MAX_OPEN_FILE) {
-		return EXIT_FAILURE;
-	}
-	file_node* cur_file = open_file_table[fd];
-	if (cur_file == NULL) {
-		// the file has not been opened
-		return EXIT_FAILURE;
-	}
-	int inode_idx = cur_file->inode_entry;
-	if (inode_idx > num_of_total_inode) {
-		// the file doesn't exist
-		return EXIT_FAILURE;
-	}
-	else if (disk_inode_region[inode_idx]->nlink < 1) {
-		return EXIT_FAILURE;
-	}
-	else {
-		cur_file->block_offset = 0;
-		cur_file->byte_offset = 0;
-	}
+	f_seek(fd, 0, "SEEK_SET");
 	// return EXIT_SUCCESS;
 }
-*/
+
 void clean_inode(inode* cur, int index) {
 	cur->nlink = 0;
     cur->next_inode = sb->free_inode; //the next free inode is the head of free inode list
