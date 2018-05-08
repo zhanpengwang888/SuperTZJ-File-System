@@ -406,6 +406,8 @@ int format_with_given_size(string filename, long int file_size)
 
 
 int f_seek(int fd, long int offset, char* whence) {
+	printf("here is f_seek test printing!! &&&&&&&&&&&&&&&&&&&&&&\n");
+	print_file_status(fd);
 	if (fd < 0 or fd > MAX_OPEN_FILE) {
 		return EXIT_FAILURE;
 	}
@@ -415,6 +417,7 @@ int f_seek(int fd, long int offset, char* whence) {
 		return EXIT_FAILURE;
 	}
 	int inode_idx = cur_file->inode_entry;
+	print_inode(disk_inode_region[inode_idx],inode_idx,1);
 	if (inode_idx > num_of_total_inode) {
 		// the file doesn't exist
 		return EXIT_FAILURE;
@@ -2066,13 +2069,14 @@ size_t f_write(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 	// Check if it is a valid file descriptor. Then, checking if the file is open or not.
 	// Next, check if the user has the right permission to write the file.
 	file_node *target_file = open_file_table[fd]; // get the file
+	printf("This is f_write test printing! &&&&&&&&&&&&&&&&&&&&&&&&&\n");
 	if (fd < 0 || fd > MAX_OPEN_FILE) {
 		printf("Invalid file descriptor.\n");
 		return FAIL;
 	} else if (target_file->inode_entry == -1) {
 		printf("This file has not been opened.\n");
 		return FAIL;
-	} else if (target_file->mode != WRONLY || target_file->mode != WRONLY + RDONLY || target_file->mode != WRONLY + RDONLY + EXEONLY) {
+	} else if (target_file->mode != WRONLY && target_file->mode != WRONLY + RDONLY && target_file->mode != WRONLY + RDONLY + EXEONLY) {
 		printf("Permission denied.\n");
 		return FAIL;
 	} else if (size <= 0 || nitems <=0) {
