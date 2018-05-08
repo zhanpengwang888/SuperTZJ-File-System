@@ -242,10 +242,10 @@ int main() {
 	format_default_size("test");
 
 	//for testing small file
-	//create_test_file("test");
+	create_test_file("test");
 
 	//for testing mid size file
-	create_mid_file("test");
+	//create_mid_file("test");
 	//assume mount to root directory
 	f_mount("/","test");
 
@@ -262,12 +262,12 @@ int main() {
 	printf("out size is %d\n",out_size);
 	*/
 
-	/*
+	
 	//test f_remove small file
 	int test_fd = f_open("/test.txt","r");
 	f_close(test_fd);
 	f_remove("/test.txt");
-	printf("Testing program printing !!! $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");
+	printf("Testing program printing !!! $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n");
 	char* test_block = (char*) malloc(BLOCK_SIZE);
 	fp = fopen("test","r");
 	int data_address = inode_end + 1 * BLOCK_SIZE;
@@ -275,12 +275,23 @@ int main() {
 	fread(test_block,BLOCK_SIZE,1,fp);
 	int* free_one = (int*) test_block;
 	printf("the next free block is %d\n",free_one[0]);
-	*/
+	fseek(fp, 0, SEEK_END);
+  	size_t size = ftell(fp);
+	fseek(fp,0,SEEK_SET);
+	fread(file_buffer, size , 1,fp);
+  	sp = (Superblock*)(file_buffer + BOOT_SIZE);
+	print_superblock(sp);
+	inode* inode_head = (inode*)(file_buffer + inode_start);
+    inode* root = inode_head;
+    print_directory(sp,root,file_buffer);
+	//also need to print root directory
+
+	
 
 	//test f_write small file
 
-
-	//test F_open and read with large file
+	/*
+	//test F_open and read with middle file
 	int test_fd = f_open("/test.txt","r");
 	char* test_buffer = (char*) malloc(BLOCK_SIZE);
 	int out_size = f_read(test_buffer,6000,1,test_fd);
@@ -290,5 +301,6 @@ int main() {
 	f_close(test_fd);
 	out_size = f_read(test_buffer,500,1,test_fd);
 	printf("out size is %d\n",out_size);
+	*/
 	return 0;
 }
