@@ -1317,6 +1317,7 @@ vector<string> split(const string &s, char delim)
 int add_to_file_table(int inode_num, inode *f_node,int mode)
 {
 	//get the inode from inode region
+	printf("the add to file talbe is testing!*************************************\n");
 	int i;
 	for (i = 0; i < MAX_OPEN_FILE; i++)
 	{
@@ -1330,6 +1331,7 @@ int add_to_file_table(int inode_num, inode *f_node,int mode)
 			break;
 		}
 	}
+	print_file_status(i);
 	return i;
 }
 
@@ -1868,6 +1870,9 @@ int f_remove(const string path) {
 int f_open(const string restrict_path, const string restrict_mode)
 {
 	//we need to check mode here to avoid invalid mode
+	printf("fopen testing print!!! ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n");
+	//print_file_table();
+	printf("thhe file is %s, the mode of file is %s\n",restrict_path.c_str(),restrict_mode.c_str());
 	if (restrict_mode != "r" && restrict_mode != "w" && restrict_mode != "a")
 	{
 		cout << "The open mode is incorrect, please input \"r\" or \"w\" or \"a\"" << endl;
@@ -1904,7 +1909,7 @@ int f_open(const string restrict_path, const string restrict_mode)
 			break;
 		}
 	}
-	//printf("the dir_node of this file is %d\n",dir_node);
+	printf("the dir_node of this file is %d\n",dir_node);
 	if (dir_node == -1) {
 		if (counter != path_list.size() - 1) {
 			return EXIT_FAILURE;
@@ -1935,13 +1940,18 @@ int f_open(const string restrict_path, const string restrict_mode)
 		3.find the first data block index
 		4.set the rest
 	*/
+	printf("It should come to here at least once\n");
 	inode *target = disk_inode_region[dir_node];
 	//if not in the file table, add an new element in it
 	int result;
-	if(restrict_mode == "r")
+	if(restrict_mode == "r"){
+		printf("come in read mode\n");
 		result = add_to_file_table(dir_node, target,RDONLY);
-	else
+	}
+	else{
+		printf("come in write mode\n");
 		result = add_to_file_table(dir_node, target,WRONLY);
+	}
 	//print_file_table();
 	//we also need to deal with open_file_table, have a function to add and remove element in open file table
 
@@ -1978,7 +1988,7 @@ int f_open(const string restrict_path, const string restrict_mode)
 			print_file_status(result);
 		}
 	}
-
+	printf("the f_open test printing ends$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n");
 	return result;
 }
 
@@ -2362,6 +2372,7 @@ size_t f_write(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 	}
 	target_file->block_index = curr_block;
 	target_file->byte_offset = (BLOCK_SIZE - padding) % BLOCK_SIZE;
+	print_file_status(fd);
 	update_sb();
 	return return_value;
 }
@@ -2467,6 +2478,7 @@ int create_file(const string filename, int parent_inode, int type, int mode)
 			open_file_table[i]->block_offset = 1;
 			open_file_table[i]->block_index = -1;
 			open_file_table[i]->mode = EXEONLY + WRONLY + RDONLY;
+			break;
 		}
 	}
 
