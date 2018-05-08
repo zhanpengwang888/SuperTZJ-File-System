@@ -26,7 +26,7 @@ int add_to_file_table(int inode_num, inode *f_node,int mode);
 int traverse_dir(int dirinode_index, string filename, bool isLast);
 int get_next_free_block(int block_index);
 int remove_p_dir_entry(inode* parent, int p_index);
-int swap_entry(int dirinode_index, char* filename);
+int swap_entry(int dirinode_index, string filename);
 directory_entry* deal_last_entry(int dirinode_index,char* filename);
 
 //testing function
@@ -1389,7 +1389,7 @@ directory_entry* deal_last_entry(int dirinode_index, char* filename) {
 //we then find and delete the last entry in the parent directory
 //use the return value( a directory entry struct) to replace the current entry
 //if succeed, return 0, else return -1
-int swap_entry(int dirinode_index, char* filename)
+int swap_entry(int dirinode_index, string filename)
 {
 	//bool IsExist = false;
 	//size_t size_of_disk = 6666666666;				  // IT MUST BE CHANGED LATER.
@@ -1410,6 +1410,8 @@ int swap_entry(int dirinode_index, char* filename)
 	// now lets check the data region to check if the given filename exists or not
 	// first, look into the direct data blocks
 	size_t remaining_size = direct->size; // get the size of the directory, and says it is the remaining size.
+	printf("swap entry testing print! &&&&&&&&&&&&&&&&&&&&&&&&&&&&\n");
+	printf("remaining_size is %ld\n",remaining_size);
 	int data_offset = sb->data_offset;	// get the data offset from the super block
 	size_t data_region_starting_addr = BOOT_SIZE + SUPER_SIZE + data_offset * BLOCK_SIZE;
 	for (int i = 0; i < N_DBLOCKS; i++)
@@ -1781,7 +1783,7 @@ int traverse_dir(int dirinode_index, string filename, bool isLast)
 }
 
 int remove_p_dir_entry(inode* parent,int parent_index) {
-	return swap_entry(parent_index,parent->file_name);
+	return swap_entry(parent_index,string(parent->file_name));
 
 }
 int f_remove(const string path) {
