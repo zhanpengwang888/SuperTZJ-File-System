@@ -31,7 +31,7 @@ int main() {
 	fd = f_open("/test.txt","a");
 	char* test_text = "It is the choice of Steins Gate!\n";
 	//test f_write here
-	//f_write(test_text, strlen(test_text),1,fd);
+	f_write(test_text, strlen(test_text),1,fd);
 	printf("I write %d by f_write\n",strlen(test_text));
 	//get the inode region
 	fp = fopen("test","r");
@@ -46,8 +46,10 @@ int main() {
     inode* root = inode_head;
     print_inode_region(sp,file_buffer);
 	//use f_seek to go back
-	f_seek(fd,0,SEEK_SET);
-
+	//we should have pre define
+	//f_seek(fd,10,"SEEK_SET");
+    f_close(fd);
+    fd = f_open("/test.txt","r");
 	char* test_block = (char*)(malloc(BLOCK_SIZE));
 	int out_size = f_read(test_block,BLOCK_SIZE,1,fd);
 	if(out_size > 0)

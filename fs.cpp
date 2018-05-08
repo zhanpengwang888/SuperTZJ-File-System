@@ -407,6 +407,7 @@ int format_with_given_size(string filename, long int file_size)
 
 int f_seek(int fd, long int offset, char* whence) {
 	printf("here is f_seek test printing!! &&&&&&&&&&&&&&&&&&&&&&\n");
+	printf("the whence is whence is %s\n",whence);
 	print_file_status(fd);
 	if (fd < 0 or fd > MAX_OPEN_FILE) {
 		return EXIT_FAILURE;
@@ -455,6 +456,8 @@ int f_seek(int fd, long int offset, char* whence) {
 			cur_file->block_index = get_index_by_offset(disk_inode_region[inode_idx], cur_file->block_offset);
 		}
 	}
+	printf("the current fd after f_seek is: \n");
+	print_file_status(fd);
 	return EXIT_SUCCESS;
 }
 
