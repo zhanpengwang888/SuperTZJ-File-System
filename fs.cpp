@@ -1073,9 +1073,235 @@ int f_mkdir(string path, int mode) {
 	return SUCCESS;
 }
 
-// Need implementation.
+// f_rmdir: using f_remove to recursively remove the given directory. It is very slow...
+// Need to be tested. Potential very buggy.
 int f_rmdir(string filepath) {
-	return SUCCESS;
+	//parse the path to know the filename
+	vector<string> path_list = split(filepath, '/');
+	for (int i = 0; i < path_list.size(); i++)
+	{
+		cout << "This element is " << path_list[i] << endl;
+	}
+	int dir_node = sb->root;
+	// check if the directory has already existed.
+	for (int i = 0; i < path_list.size(); i++){
+		dir_node = traverse_directory(dir_node, path_list[i]);
+		if (dir_node == FAIL) {
+			cout << "The directory does not exist." << endl;
+			return FAIL;
+		}
+	}
+	// now we can delete the directory
+	inode* directory_inode = disk_inode_region[dir_node]; // get the directory inode
+	int permission = directory_inode->permission;
+	unsigned long file_size = directory_inode->size;
+	int data_offset = sb->data_offset;
+	size_t data_region_starting_addr = BOOT_SIZE + SUPER_SIZE + data_offset * BLOCK_SIZE;
+	int num_of_directory_entries = file_size / (BLOCK_SIZE * sizeof(directory_entry)); // calculate the number of directory entries. Hope it is correct.
+	size_t remaining_size = file_size;
+	// if the directory permission is not rx and rwx, you don't have the permission to delete the directory
+	if (permission != WRONLY + EXEONLY && permission != RDONLY + WRONLY + EXEONLY) {
+		cout << "[f_rmdir] Permission Denied." << endl;
+		return FAIL;
+	}
+	// iterate through all the directory entries to delete them
+	for (int i = 0; i < N_DBLOCKS; i++)
+	{
+		int data_block_index = directory_inode->dblocks[i];
+		// one data block can have 16 directory entries
+		size_t directories_starting_region = data_region_starting_addr + BLOCK_SIZE * data_block_index;
+		for (int j = 0; j < BLOCK_SIZE / sizeof(directory_entry); j++)
+		{
+			// may not work! Logic seems to be fine.
+			lseek(disk, directories_starting_region + j * sizeof(directory_entry), SEEK_SET);
+			//char *entry_char = (char *)malloc(sizeof(directory_entry));
+			char entry_char[sizeof(directory_entry)];
+			read(disk, entry_char, sizeof(directory_entry));
+			directory_entry *entry = (directory_entry *)entry_char;
+			//directory_entry *entry = (directory_entry *)disk_buffer + directories_starting_region + j * sizeof(directory_entry); // get each directory entry
+			// check if it is a directory or a file.
+			char *name = entry->file_name;
+			int inode_index_of_file = entry->inode_entry;
+			if (disk_inode_region[inode_index_of_file]->type == DIRECTORY_FILE) {
+				string directory_path_string = filepath + string(name);
+				f_rmdir(directory_path_string);
+			} else {
+				string file_path_string = filepath + string(name);
+				f_remove(file_path_string);
+			}
+			remaining_size -= sizeof(directory_entry); // reducing the remaining size by 32 bytes.
+			// if the remaining size is <= 64 bytes, which means it is an emptry directory, delete it self.
+			// hopefully it works..
+			if (remaining_size <= sizeof(directory_entry) * 2) {
+				return f_remove(filepath);
+			}
+			if (remaining_size <= 0)
+			{
+				return SUCCESS;
+			}
+		}
+	}
+	// if the remaining_size is not 0, we still need to look into other data blocks.
+	// Then, look into the single indirect data blocks
+	size_t ptr_addr;
+	for (int i = 0; i < N_IBLOCKS; i++)
+	{
+		ptr_addr = data_region_starting_addr + BLOCK_SIZE * directory_inode->iblocks[i];
+		char data_blocks_char[BLOCK_SIZE];
+		bzero(data_blocks_char, BLOCK_SIZE);
+		lseek(disk, ptr_addr, SEEK_SET);
+		read(disk, data_blocks_char, BLOCK_SIZE);
+		//memcpy(data_blocks_char, disk_buffer + ptr_addr, BLOCK_SIZE);
+		int *direct_data_block = (int *)data_blocks_char;
+		// loop through 128 direct data blocks pointers.
+		for (int j = 0; j < BLOCK_SIZE / sizeof(int); j++)
+		{
+			size_t dBlock_ptr_addr = data_region_starting_addr + BLOCK_SIZE * direct_data_block[j];
+			// loop through 16 directory entries.
+			for (int k = 0; k < BLOCK_SIZE / sizeof(directory_entry); k++)
+			{
+				lseek(disk, dBlock_ptr_addr + k * sizeof(directory_entry), SEEK_SET);
+				char entry_char[sizeof(directory_entry)];
+				read(disk, entry_char, sizeof(directory_entry));
+				directory_entry *entry = (directory_entry *)entry_char;
+				//directory_entry *entry = (directory_entry *)disk_buffer + dBlock_ptr_addr + k * sizeof(directory_entry);
+				// check if it is a directory or a file.
+				char *name = entry->file_name;
+				int inode_index_of_file = entry->inode_entry;
+				if (disk_inode_region[inode_index_of_file]->type == DIRECTORY_FILE) {
+					string directory_path_string = filepath + string(name);
+					f_rmdir(directory_path_string);
+				} else {
+					string file_path_string = filepath + string(name);
+					f_remove(file_path_string);
+				}
+				remaining_size -= sizeof(directory_entry); // reducing the remaining size by 32 bytes.
+				if (remaining_size <= sizeof(directory_entry) * 2) {
+					return f_remove(filepath);
+				}
+				if (remaining_size <= 0)
+				{
+					return SUCCESS;
+				}
+			}
+		}
+	}
+	// Next, look into the double indirect data blocks
+	size_t i2block_ptr_addr = data_region_starting_addr + directory_inode->i2block * BLOCK_SIZE;
+	char indirect_data_blocks_chars[BLOCK_SIZE];
+	bzero(indirect_data_blocks_chars, BLOCK_SIZE);
+	lseek(disk, i2block_ptr_addr, SEEK_SET);
+	read(disk, indirect_data_blocks_chars, BLOCK_SIZE);
+	//memcpy(indirect_data_blocks_chars, disk_buffer + i2block_ptr_addr, BLOCK_SIZE);
+	int *indirect_data_blocks = (int *)indirect_data_blocks_chars;
+	// loop through 128 indirect data blocks
+	for (int i = 0; i < BLOCK_SIZE / sizeof(int); i++)
+	{
+		size_t idblock_ptr_addr = data_region_starting_addr + indirect_data_blocks[i] * BLOCK_SIZE;
+		char data_blocks_char[BLOCK_SIZE];
+		bzero(data_blocks_char, BLOCK_SIZE);
+		lseek(disk, idblock_ptr_addr, SEEK_SET);
+		read(disk, data_blocks_char, BLOCK_SIZE);
+		//memcpy(data_blocks_char, disk_buffer + idblock_ptr_addr, BLOCK_SIZE);
+		int *direct_data_block = (int *)data_blocks_char;
+		// loop through 128 direct data blocks pointers.
+		for (int j = 0; j < BLOCK_SIZE / sizeof(int); j++)
+		{
+			size_t dBlock_ptr_addr = data_region_starting_addr + BLOCK_SIZE * direct_data_block[j];
+			// loop through 16 directory entries.
+			for (int k = 0; k < BLOCK_SIZE / sizeof(directory_entry); k++)
+			{
+				lseek(disk, dBlock_ptr_addr + k * sizeof(directory_entry), SEEK_SET);
+				char entry_char[sizeof(directory_entry)];
+				read(disk, entry_char, sizeof(directory_entry));
+				directory_entry *entry = (directory_entry *)entry_char;
+				//directory_entry *entry = (directory_entry *)disk_buffer + dBlock_ptr_addr + k * sizeof(directory_entry);
+				// check if it is a directory or a file.
+				char *name = entry->file_name;
+				int inode_index_of_file = entry->inode_entry;
+				if (disk_inode_region[inode_index_of_file]->type == DIRECTORY_FILE) {
+					string directory_path_string = filepath + string(name);
+					f_rmdir(directory_path_string);
+				} else {
+					string file_path_string = filepath + string(name);
+					f_remove(file_path_string);
+				}
+				remaining_size -= sizeof(directory_entry); // reducing the remaining size by 32 bytes.
+				if (remaining_size <= sizeof(directory_entry) * 2) {
+					return f_remove(filepath);
+				}
+				if (remaining_size <= 0)
+				{
+					return SUCCESS;
+				}
+			}
+		}
+	}
+
+	// Finally, look into the triple indirect data blocks
+	size_t i3block_ptr_addr = data_region_starting_addr + directory_inode->i3block * BLOCK_SIZE;
+	char i2blocks_char[BLOCK_SIZE];
+	bzero(i2blocks_char, BLOCK_SIZE);
+	lseek(disk, i3block_ptr_addr, BLOCK_SIZE);
+	read(disk, i2blocks_char, BLOCK_SIZE);
+	//memcpy(i2blocks_char, disk_buffer + i3block_ptr_addr, BLOCK_SIZE);
+	int *i2blocks = (int *)i2blocks_char;
+	// first, loop through 128 doubly indirect data blocks
+	for (int o = 0; o < BLOCK_SIZE / sizeof(int); o++)
+	{
+		size_t i2block_ptr_addr = data_region_starting_addr + i2blocks[o] * BLOCK_SIZE;
+		char indirect_data_blocks_chars[BLOCK_SIZE];
+		bzero(indirect_data_blocks_chars, BLOCK_SIZE);
+		lseek(disk, i2block_ptr_addr, BLOCK_SIZE);
+		read(disk, indirect_data_blocks_chars, BLOCK_SIZE);
+		//memcpy(indirect_data_blocks_chars, disk_buffer + i2block_ptr_addr, BLOCK_SIZE);
+		int *indirect_data_blocks = (int *)indirect_data_blocks_chars;
+		// loop through 128 indirect data blocks
+		for (int i = 0; i < BLOCK_SIZE / sizeof(int); i++)
+		{
+			size_t idblock_ptr_addr = data_region_starting_addr + indirect_data_blocks[i] * BLOCK_SIZE;
+			char data_blocks_char[BLOCK_SIZE];
+			bzero(data_blocks_char, BLOCK_SIZE);
+			lseek(disk, idblock_ptr_addr, BLOCK_SIZE);
+			read(disk, data_blocks_char, BLOCK_SIZE);
+			//memcpy(data_blocks_char, disk_buffer + idblock_ptr_addr, BLOCK_SIZE);
+			int *direct_data_block = (int *)data_blocks_char;
+			// loop through 128 direct data blocks pointers.
+			for (int j = 0; j < BLOCK_SIZE / sizeof(int); j++)
+			{
+				size_t dBlock_ptr_addr = data_region_starting_addr + BLOCK_SIZE * direct_data_block[j];
+				// loop through 16 directory entries.
+				for (int k = 0; k < BLOCK_SIZE / sizeof(directory_entry); k++)
+				{
+					lseek(disk, dBlock_ptr_addr + k * sizeof(directory_entry), SEEK_SET);
+					char entry_char[sizeof(directory_entry)];
+					read(disk, entry_char, sizeof(directory_entry));
+					directory_entry *entry = (directory_entry *)entry_char;
+					//directory_entry *entry = (directory_entry *)disk_buffer + dBlock_ptr_addr + k * sizeof(directory_entry);
+					// check if it is a directory or a file.
+					char *name = entry->file_name;
+					int inode_index_of_file = entry->inode_entry;
+					if (disk_inode_region[inode_index_of_file]->type == DIRECTORY_FILE) {
+						string directory_path_string = filepath + string(name);
+						f_rmdir(directory_path_string);
+					} else {
+						string file_path_string = filepath + string(name);
+						f_remove(file_path_string);
+					}
+					remaining_size -= sizeof(directory_entry); // reducing the remaining size by 32 bytes.
+					if (remaining_size <= sizeof(directory_entry) * 2) {
+						return f_remove(filepath);
+					}
+					if (remaining_size <= 0)
+					{
+						return SUCCESS;
+					}
+				}
+			}
+		}
+	}
+	// it still does not return, something is wrong.
+	return FAIL;
 }
 
 //http://ysonggit.github.io/coding/2014/12/16/split-a-string-using-c.html for split
