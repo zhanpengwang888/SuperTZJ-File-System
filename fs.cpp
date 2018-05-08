@@ -2129,8 +2129,10 @@ size_t f_write(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 	// origin data in the block ||| data we need to copy  ||| padding that fills the block
 	rounded_buffer = malloc(blocks_needed * BLOCK_SIZE);
 	bzero(rounded_buffer, blocks_needed * BLOCK_SIZE);
-	lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + curr_block * BLOCK_SIZE, SEEK_SET);
-	read(disk, rounded_buffer, curr_offset);
+	if (curr_offset != 0 && curr_block != -1) {
+		lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + curr_block * BLOCK_SIZE, SEEK_SET);
+		read(disk, rounded_buffer, curr_offset);
+	}
 	transfer_buffer = (void*) ((char*) rounded_buffer + curr_offset);
 	memcpy(transfer_buffer, restrict_ptr, num_byte_need_to_copy);
 	long block_to_write = -1;
