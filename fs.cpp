@@ -487,6 +487,13 @@ void clean_inode(inode* cur, int index) {
     strcpy(cur->file_name,""); //clear the file name
     //update the free inode list in superblock
     sb->free_inode = index;
+    //write back to the disk
+    size_t data_start = BOOT_SIZE + SUPER_SIZE + sb->inode_offset * BLOCK_SIZE + index*sizeof(inode);
+    if(lseek(disk, data_address,SEEK_SET) < 0){
+  		cout << "There is something wrong in lseek of clean block" << endl;
+		return;
+	}
+	write(disk,cur,BLOCK_SIZE);
 }
 
 //update the superblock and write in disk image
