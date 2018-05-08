@@ -26,7 +26,7 @@ void create_mid_node(inode* test_inode, int index, int size, string name){
 	test_inode->size = size;
 	test_inode->uid = 0;
 	test_inode->gid = 0;
-	test_inode->parent = 0;
+	test_inode->parent = 0; //parent is root
 	for (int i = 0; i < N_DBLOCKS; i++)
 	{
 			test_inode->dblocks[i] = i + 1;

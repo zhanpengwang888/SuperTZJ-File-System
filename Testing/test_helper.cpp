@@ -7,8 +7,8 @@ int get_index_by_offset(int offset) {
 	int entry_num = 128;
 	int d_limit = 10;
 	int i_limit = d_limit + 4 * entry_num;
-	int i2_limit = d_limit + i_limit + entry_num * entry_num;
-	int i3_limit = d_limit + i_limit + i2_limit + entry_num * entry_num * entry_num;
+	int i2_limit = i_limit + entry_num * entry_num;
+	int i3_limit = i2_limit + entry_num * entry_num * entry_num;
 	int index = offset - 1;
 	int b_index, f_index, s_index;
 	int f_offset, s_offset;
@@ -55,8 +55,8 @@ int main() {
 	int entry_num = 128;
 	int d_limit = 10;
 	int i_limit = d_limit + 4 * entry_num;
-	int i2_limit = d_limit + i_limit + entry_num * entry_num;
-	int i3_limit = d_limit + i_limit + i2_limit + entry_num * entry_num * entry_num;
+	int i2_limit = i_limit + entry_num * entry_num;
+	int i3_limit = i2_limit + entry_num * entry_num * entry_num;
 	get_index_by_offset(i2_limit + 50000);
 	return 0;
 }
