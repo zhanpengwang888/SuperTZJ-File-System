@@ -969,12 +969,18 @@ directory_entry *f_readdir(int dirfd) {
 	size_t data_region_starting_addr = BOOT_SIZE + SUPER_SIZE + data_offset * BLOCK_SIZE;
 	int num_of_directory_entries = target_directory_inode->size / (BLOCK_SIZE * sizeof(directory_entry)); // get the number of entries under this directory
 	// if the byte_offset is 0, that means we need to give the user the current directory, "."
+	if (counter >= target_directory_inode->size / BLOCK_SIZE) {
+		return NULL;
+	}
+
 	if (counter == 0) {
 		directory_entry* dir_ptr = (directory_entry *)dir_ptr_char;
 		dir_ptr->inode_entry = target_directory->inode_entry;
 		std::strcpy(dir_ptr->file_name, ".");
 		counter ++;
 		open_directory_tracker[dirfd] = counter;
+		byte_offset += sizeof(directory_entry); // increment the byte_offset by the sizeof directory_entry.
+		target_directory->byte_offset = byte_offset; // update the offset
 		return dir_ptr;
 	} else if (counter == 1) {
 		int parent_inode_index = target_directory_inode->parent; // get the parent's inode index
@@ -983,32 +989,41 @@ directory_entry *f_readdir(int dirfd) {
 		std::strcpy(dir_ptr->file_name, "..");
 		counter ++;
 		open_directory_tracker[dirfd] = counter;
+		byte_offset += sizeof(directory_entry); // increment the byte_offset by the sizeof directory_entry.
+		target_directory->byte_offset = byte_offset; // update the offset
 		return dir_ptr;
 	} else {
 		// Third call, Fourth call, etc.
 		// use lseek and read.
 		// go to the corresponding directory entry.
-		if (lseek(disk, data_region_starting_addr + BLOCK_SIZE * block_index + byte_offset, SEEK_SET) == FAIL) {
-			printf("[lseek in f_readdir] Fails");
-			return NULL;
-		}
-		read(disk, dir_ptr_char, sizeof(directory_entry)); // read it into a directory entry buffer.
-		directory_entry* dir_ptr = (directory_entry *)dir_ptr_char;
-		// now update the open file table
-		// if the byte_offset is less than the block size, we just need to update the byte offset.
 		if (byte_offset < BLOCK_SIZE) {
 			byte_offset += sizeof(directory_entry); // increment the byte_offset by the sizeof directory_entry.
 			target_directory->byte_offset = byte_offset; // update the offset
 			open_file_table[dirfd] = target_directory; // update the open file table, maybe this step is unnecessary
-			return dir_ptr;
-		} else if (byte_offset >= BLOCK_SIZE) {
+			if (lseek(disk, data_region_starting_addr + BLOCK_SIZE * block_index + byte_offset - sizeof(directory_entry), SEEK_SET) == FAIL) {
+				printf("[lseek in f_readdir] Fails");
+				return NULL;
+			}
+		} 
+		else if (byte_offset >= BLOCK_SIZE) {
 			block_offset ++;
 			target_directory->block_offset = block_offset; // increment the block_offset by 1
 			target_directory->byte_offset = 0; // reset the byte_offset to 0
 			target_directory->block_index = get_index_by_offset(target_directory_inode, block_offset); // get the block index.
 			open_file_table[dirfd] = target_directory; // update the open file table, maybe this step is unnecessary
-			return dir_ptr;
+			if (lseek(disk, data_region_starting_addr + BLOCK_SIZE * block_index + byte_offset, SEEK_SET) == FAIL) {
+				printf("[lseek in f_readdir] Fails");
+				return NULL;
+			}
 		}
+		counter++;
+		open_directory_tracker[dirfd] = counter;
+		read(disk, dir_ptr_char, sizeof(directory_entry)); // read it into a directory entry buffer.
+		directory_entry* dir_ptr = (directory_entry *)dir_ptr_char;
+		// now update the open file table
+		// if the byte_offset is less than the block size, we just need to update the byte offset.
+
+		return dir_ptr;
 	}
 	// if it still does not return, something wrong happens.
 	return NULL;
