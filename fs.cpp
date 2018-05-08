@@ -104,7 +104,7 @@ int f_unmount(char* diskname) {
 
 
 void create_root_dir(inode* rt_node) {
-  printf("I am here\n");
+  //printf("I am here\n");
   size_t data_address = BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE;
   //create buffer to index_table of indirect block
   char* dir_buffer = (char*) malloc(sizeof(char) * BLOCK_SIZE);
@@ -239,7 +239,7 @@ int format_default_size(string filename)
 		//the first one will be root directory
 		if(i == 0) {
 			root_inode->next_inode = -1;
-			lseek(fd, BOOT_SIZE + SUPER_SIZE + sb->inode_offset * BLOCK_SIZE + i * sizeof(inode), SEEK_SET);
+			lseek(fd, BOOT_SIZE + SUPER_SIZE + sb->inode_offset * BLOCK_SIZE, SEEK_SET);
 			write(fd, root_inode, sizeof(inode));
 			continue;
 		}
@@ -477,13 +477,13 @@ void clean_inode(inode* cur, int index) {
     cur->uid = 0;
     cur->gid = 0;
     for(int i = 0; i < N_DBLOCKS; i++) {
-      cur->dblocks[i] = 0;
+      cur->dblocks[i] = -1;
     }
     for(int i = 0; i < N_IBLOCKS; i++) {
-      cur->iblocks[i] = 0;
+      cur->iblocks[i] = -1;
     }
-    cur->i2block = 0;
-    cur->i3block = 0;
+    cur->i2block = -1;
+    cur->i3block = -1;
     strcpy(cur->file_name,""); //clear the file name
     //update the free inode list in superblock
     sb->free_inode = index;
@@ -493,7 +493,7 @@ void clean_inode(inode* cur, int index) {
   		cout << "There is something wrong in lseek of clean block" << endl;
 		return;
 	}
-	write(disk,cur,BLOCK_SIZE);
+	write(disk,cur,sizeof(inode));
 }
 
 //update the superblock and write in disk image

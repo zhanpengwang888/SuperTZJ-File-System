@@ -10,7 +10,7 @@ void create_mid_node(inode* test_inode, int index, int size, string name){
  test_inode->nlink = 1;
  test_inode->permission = 7;
  test_inode->type = NORMAL_FILE;
- test_inode->next_inode = -1;
+ test_inode->next_inode = 1;
  test_inode->size = size;
  test_inode->uid = 0;
  test_inode->gid = 0;
@@ -37,7 +37,7 @@ void create_node(inode* test_inode, int index, int size, string name){
  test_inode->nlink = 1;
  test_inode->permission = 7;
  test_inode->type = NORMAL_FILE;
- test_inode->next_inode = -1;
+ test_inode->next_inode = 1;
  test_inode->size = size;
  test_inode->uid = 0;
  test_inode->gid = 0;

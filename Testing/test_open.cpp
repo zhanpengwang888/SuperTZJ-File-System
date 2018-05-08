@@ -242,13 +242,12 @@ int main() {
 	format_default_size("test");
 
 	//for testing small file
-	//create_test_file("test");
+	create_test_file("test");
 
 	//for testing mid size file
-	create_mid_file("test");
+	//create_mid_file("test");
 	//assume mount to root directory
 	f_mount("/","test");
-
 	/*
 	//test F_open read mode
 	int test_fd = f_open("/test.txt","r");
@@ -289,7 +288,7 @@ int main() {
 	*/
 	
 	
-
+	/*
 	//test write mode with small file
 	int test_fd = f_open("/test2.txt","w");
 	//check root directory
@@ -304,11 +303,12 @@ int main() {
 	inode* inode_head = (inode*)(file_buffer + inode_start);
     inode* root = inode_head;
     print_directory(sp,root,file_buffer);
-    //print_inode_region(sp,file_buffer);
     char* test_text = "It is the choice of Steins Gate!\n";
 	//test f_write here
 	int w_size = f_write(test_text, strlen(test_text),1,fd);
 	printf("I write %d by f_write\n",w_size);
+	fread(file_buffer, size ,1,fp);
+	//print_inode_region(sp,file_buffer);
 	//test content in it
 	f_close(fd);
     fd = f_open("/test2.txt","r");
@@ -318,7 +318,7 @@ int main() {
 		printf("the content we get from the test block is %s, its size is %d\n",test_block,out_size);
 	else
 		printf("something wrong about f_read or write or seek!\n");
-
+	*/
 	/*
 	//test F_open and read with middle file
 	int test_fd = f_open("/test.txt","r");
