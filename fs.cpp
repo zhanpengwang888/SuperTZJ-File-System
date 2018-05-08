@@ -2332,8 +2332,8 @@ size_t f_write(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 	}
 
 	int return_value = starting_size - padding - (target_file->block_offset - 1) * BLOCK_SIZE + curr_offset;
-	if ((target_file->block_offset - 1) * BLOCK_SIZE + num_byte_need_to_copy > inode_of_file->size) {
-		inode_of_file->size = (target_file->block_offset - 1) * BLOCK_SIZE + num_byte_need_to_copy;
+	if ((target_file->block_offset - 1) * BLOCK_SIZE + curr_offset + num_byte_need_to_copy > inode_of_file->size) {
+		inode_of_file->size = (target_file->block_offset - 1) * BLOCK_SIZE + num_byte_need_to_copy + curr_offset;
 		lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->inode_offset * BLOCK_SIZE + target_file->inode_entry * sizeof(inode), SEEK_SET);
 		write(disk, inode_of_file, sizeof(inode));
 	}
