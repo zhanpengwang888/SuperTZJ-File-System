@@ -174,8 +174,9 @@ int format_default_size(string filename)
 		}
 		else
 		{
+			int temp = i + 1;
 			lseek(fd, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + i * BLOCK_SIZE, SEEK_SET);
-			write(fd, &i, sizeof(int));
+			write(fd, &temp, sizeof(int));
 		}
 	}
 
@@ -311,8 +312,9 @@ int format_with_given_size(string filename, long int file_size)
 		}
 		else
 		{
+			int temp = i + 1;
 			lseek(fd, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + i * BLOCK_SIZE, SEEK_SET);
-			write(fd, &i, sizeof(int));
+			write(fd, &temp, sizeof(int));
 		}
 	}
 
