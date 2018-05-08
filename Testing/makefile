@@ -4,8 +4,10 @@ test_format: test_format.cpp ../file_util.h test_util.h
 	g++ -std=c++11 -o test_format test_format.cpp ../fs.cpp test_util.cpp 
 test_open: test_open.cpp ../file_util.h test_util.h
 	g++ -std=c++11 -o test_open test_open.cpp ../fs.cpp test_util.cpp 
-test_helper.cpp: test_helper.cpp ../file_util.h test_util.h
+test_helper: test_helper.cpp ../file_util.h test_util.h
 	g++ -std=c++11 -o test_helper test_helper.cpp test_util.cpp
+test_write: test_write.cpp ../file_util.h test_util.h
+	g++ -std=c++11 -o test_write test_write.cpp ../fs.cpp test_util.cpp 
 
 SHELL:=/bin/bash -O extglob
 clean:

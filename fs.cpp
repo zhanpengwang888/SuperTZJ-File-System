@@ -427,12 +427,14 @@ int f_seek(int fd, long int offset, char* whence) {
 	}
 	else {
 		if (strcmp(whence, "SEEK_SET") == 0) {
+			printf("it comes in SEEK_SET\n");
 			if (offset > disk_inode_region[inode_idx]->size) {
 				return EXIT_FAILURE;
 			}
 			cur_file->block_offset = offset / BLOCK_SIZE + 1;
 			cur_file->byte_offset = offset % BLOCK_SIZE;
 			cur_file->block_index = get_index_by_offset(disk_inode_region[inode_idx], cur_file->block_offset);
+			printf("if finishes its job in SEEK_SET\n");
 		}
 		else if (strcmp(whence, "SEEK_CUR") == 0) {
 			long int to_modify = cur_file->block_offset * BLOCK_SIZE + cur_file->byte_offset + offset;
