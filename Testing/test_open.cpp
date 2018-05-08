@@ -290,7 +290,34 @@ int main() {
 	
 	
 
-	//test f_write small file
+	//test write mode with small file
+	int test_fd = f_open("/test2.txt","w");
+	//check root directory
+	fp = fopen("test","r");
+	fseek(fp, 0, SEEK_END);
+  	size_t size = ftell(fp);
+	fseek(fp,0,SEEK_SET);
+	file_buffer = (char*) malloc(size);
+	fread(file_buffer, size ,1,fp);
+  	sp = (Superblock*)(file_buffer + BOOT_SIZE);
+	print_superblock(sp);
+	inode* inode_head = (inode*)(file_buffer + inode_start);
+    inode* root = inode_head;
+    print_directory(sp,root,file_buffer);
+    //print_inode_region(sp,file_buffer);
+    char* test_text = "It is the choice of Steins Gate!\n";
+	//test f_write here
+	int w_size = f_write(test_text, strlen(test_text),1,fd);
+	printf("I write %d by f_write\n",w_size);
+	//test content in it
+	f_close(fd);
+    fd = f_open("/test2.txt","r");
+	char* test_block = (char*)(malloc(BLOCK_SIZE));
+	int out_size = f_read(test_block,BLOCK_SIZE,1,fd);
+	if(out_size > 0)
+		printf("the content we get from the test block is %s, its size is %d\n",test_block,out_size);
+	else
+		printf("something wrong about f_read or write or seek!\n");
 
 	/*
 	//test F_open and read with middle file
@@ -306,6 +333,7 @@ int main() {
 	*/
 
 	//test f_remove middle size file
+	/*
 	int test_fd = f_open("/test.txt","r");
 	f_close(test_fd);
 	f_remove("/test.txt");
@@ -329,5 +357,8 @@ int main() {
     inode* root = inode_head;
     //also need to print root directory
     print_directory(sp,root,file_buffer);
+    */
+
+
 	return 0;
 }

@@ -488,8 +488,8 @@ void clean_inode(inode* cur, int index) {
     //update the free inode list in superblock
     sb->free_inode = index;
     //write back to the disk
-    size_t data_start = BOOT_SIZE + SUPER_SIZE + sb->inode_offset * BLOCK_SIZE + index*sizeof(inode);
-    if(lseek(disk, data_address,SEEK_SET) < 0){
+    size_t inode_address = BOOT_SIZE + SUPER_SIZE + sb->inode_offset * BLOCK_SIZE + index*sizeof(inode);
+    if(lseek(disk, inode_address,SEEK_SET) < 0){
   		cout << "There is something wrong in lseek of clean block" << endl;
 		return;
 	}
@@ -1993,8 +1993,9 @@ size_t f_read(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 	} else if (target_file->inode_entry == -1) {
 		printf("This file has not been opened.\n");
 		return FAIL;
-	} else if (target_file->mode != RDONLY) {
+	} else if (target_file->mode != RDONLY && target_file->mode != RDONLY + WRONLY && target_file->mode != RDONLY + WRONLY + EXEONLY) {
 		printf("Permission Denied!!!!!\n");
+		print_file_status(fd);
 		return FAIL;
 	} else if (size <= 0 || nitems <=0) {
 		printf("Invalid size or nitems.\n");
@@ -2028,19 +2029,25 @@ size_t f_read(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 	// potential buggy while loop!!!!!!!!!!!!!!!!!!!!!!
 	print_file_status(fd);
 	printf("This is f_read test printing!**************************\n");
-	printf("remaining_size is %d\n",remaining_size);
 	// if the file size is less than the size requested by the user
+	//calculate the current spot of cursor
+	int cursor = (target_file->block_offset - 1)*BLOCK_SIZE + target_file->byte_offset;
 	if (file_size <= size_requested) {
 		remaining_size = file_size;
 		size_requested = file_size;
 	}
+	if (file_size - cursor <= size_requested) {
+		remaining_size = file_size - cursor;
+		size_requested = file_size - cursor;
+	}
+	printf("remaining_size is %d\n",remaining_size);
 	while (remaining_size >0) {
 		if (lseek(disk, data_region_starting_addr + BLOCK_SIZE * block_index + byte_offset, SEEK_SET) == FAIL) {
 			printf("[lseek in f_read] Fails");
 			return FAIL;
 		}
 		if (byte_offset != 0) {
-			printf("the byte offset is not 0\n");
+			//printf("the byte offset is not 0\n");
 			int bytes_read = BLOCK_SIZE - byte_offset;
 			read(disk, restrict_ptr, bytes_read);
 			byte_offset = 0; // reset the byte offset
@@ -2053,7 +2060,7 @@ size_t f_read(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 			if (0 < remaining_size && remaining_size <= BLOCK_SIZE) {
 				tmp_ptr  = (void*)((char*)restrict_ptr + tmp + BLOCK_SIZE * i);
 				int test = read(disk, tmp_ptr, remaining_size);
-				printf("the test tmp_ptr now is %s and %d\n",(char*)tmp_ptr,test);
+				//printf("the test tmp_ptr now is %s and %d\n",(char*)tmp_ptr,test);
 				byte_offset = remaining_size; // since the last block has the byte offset to be 0, the new byte offset will be remaining size - 0
 				target_file->byte_offset = byte_offset; // update byte_offset
 				target_file->block_offset = block_offset; // update block_offset

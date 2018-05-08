@@ -226,10 +226,10 @@ void create_test_file(char* name) {
 }
 void print_inode(inode* Inode,int index, int detail){
   char status[20] = "";
-  if(Inode->next_inode >= 0) {
+  if(Inode->nlink == 0) {
     strcpy(status,"FREE");
   }
-  else if(Inode->next_inode == -1){
+  else if(Inode->nlink > 0){
     strcpy(status,"USED");
   }
   else {

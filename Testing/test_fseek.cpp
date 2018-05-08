@@ -20,21 +20,18 @@ int main() {
 	format_default_size("test");
 
 	//for testing small file
-	create_test_file("test");
+	//create_test_file("test");
 
 	//for testing mid size file
-	//create_mid_file("test");
+	create_mid_file("test");
 	//assume mount to root directory
 	f_mount("/","test");
 
 	//test f_write small file
-	fd = f_open("/test.txt","a");
-	char* test_text = "It is the choice of Steins Gate!\n";
-	//test f_write here
-	int w_size = f_write(test_text, strlen(test_text),1,fd);
-	printf("I write %d by f_write\n",w_size);
+	fd = f_open("/test.txt","r");
 	//get the inode region
 	fp = fopen("test","r");
+	f_seek(fd,5000,"SEEK_SET");
 	fseek(fp, 0, SEEK_END);
   	size_t size = ftell(fp);
 	fseek(fp,0,SEEK_SET);
@@ -46,17 +43,15 @@ int main() {
     inode* root = inode_head;
     //print_inode_region(sp,file_buffer);
     //go to the block to see what is in there
-    char* t_block = (char*) malloc(BLOCK_SIZE);
-    int data_address = inode_end + 12 * BLOCK_SIZE;
-    fseek(fp,data_address,SEEK_SET);
-    int test_size = fread(t_block,BLOCK_SIZE,1,fp);
-    if(test_size > 0)
-    	printf("the content of test_block is %s\n",t_block);
+    // char* t_block = (char*) malloc(BLOCK_SIZE);
+    // int data_address = inode_end + 12 * BLOCK_SIZE;
+    // fseek(fp,data_address,SEEK_SET);
+    // int test_size = fread(t_block,BLOCK_SIZE,1,fp);
+    // if(test_size > 0)
+    // 	printf("the content of test_block is %s\n",t_block);
 	//use f_seek to go back
 	//we should have pre define
 	//f_seek(fd,10,"SEEK_SET");
-    f_close(fd);
-    fd = f_open("/test.txt","r");
 	char* test_block = (char*)(malloc(BLOCK_SIZE));
 	int out_size = f_read(test_block,BLOCK_SIZE,1,fd);
 	if(out_size > 0)
