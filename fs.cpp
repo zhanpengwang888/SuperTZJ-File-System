@@ -14,7 +14,7 @@ int open_directory_tracker[MAX_OPEN_FILE];
 using namespace std;
 
 //temporary prototypes -- need to combine in one util.c file
-int create_file(const string filename, int parent_inode, int type);
+int create_file(const string filename, int parent_inode, int type, int mode);
 void clean_inode(inode* cur, int index);
 void update_sb();
 void clean_block(int index);
@@ -404,7 +404,7 @@ int format_with_given_size(string filename, long int file_size)
 
 // we need to parse the command to see which format we will use
 
-/*
+
 int f_seek(int fd, long int offset, char* whence) {
 	if (fd < 0 or fd > MAX_OPEN_FILE) {
 		return EXIT_FAILURE;
@@ -427,30 +427,33 @@ int f_seek(int fd, long int offset, char* whence) {
 			if (offset > disk_inode_region[inode_idx]->size) {
 				return EXIT_FAILURE;
 			}
-			cur_file->block_offset = offset / BLOCK_SIZE;
+			cur_file->block_offset = offset / BLOCK_SIZE + 1;
 			cur_file->byte_offset = offset % BLOCK_SIZE;
+			cur_file->block_index = get_index_by_offset(disk_inode_region[inode_idx], cur_file->block_offset);
 		}
 		else if (strcmp(whence, "SEEK_CUR") == 0) {
 			long int to_modify = cur_file->block_offset * BLOCK_SIZE + cur_file->byte_offset + offset;
 			if (to_modify > disk_inode_region[inode_idx]->size) {
 				return EXIT_FAILURE;
 			}
-			cur_file->block_offset = to_modify / BLOCK_SIZE;
+			cur_file->block_offset = to_modify / BLOCK_SIZE + 1;
 			cur_file->byte_offset = to_modify % BLOCK_SIZE;
+			cur_file->block_index = get_index_by_offset(disk_inode_region[inode_idx], cur_file->block_offset);
 		}
 		else if (strcmp(whence, "SEEK_END") == 0) {
 			if (offset > 0) {
 				return EXIT_FAILURE;
 			}
-			long int to_modify = disk_inode_region[inode_idx]->size - offset;
-			cur_file->block_offset = to_modify / BLOCK_SIZE;
+			long int to_modify = disk_inode_region[inode_idx]->size + offset;
+			cur_file->block_offset = to_modify / BLOCK_SIZE + 1;
 			cur_file->byte_offset = to_modify % BLOCK_SIZE;
+			cur_file->block_index = get_index_by_offset(disk_inode_region[inode_idx], cur_file->block_offset);
 		}
 	}
 	return EXIT_SUCCESS;
 }
 
-
+/*
 void rewind(int fd) {
 	if (fd < 0 || fd > MAX_OPEN_FILE) {
 		return EXIT_FAILURE;
@@ -1603,7 +1606,7 @@ int f_open(const string restrict_path, const string restrict_mode)
 			return EXIT_FAILURE;
 		}
 		else if (restrict_mode == "a" || restrict_mode == "w") {
-			dir_node = create_file(path_list[counter], temp, NORMAL_FILE); // when mode is "w" or "a", create a file if the file doesn't exist
+			dir_node = create_file(path_list[counter], temp, NORMAL_FILE, RDONLY + WRONLY + EXEONLY); // when mode is "w" or "a", create a file if the file doesn't exist
 			for (int k = 0; k < MAX_OPEN_FILE; k++) {
 				if (open_file_table[k]->inode_entry == dir_node) {
 					return k;
