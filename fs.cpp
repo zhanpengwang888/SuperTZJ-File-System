@@ -1040,7 +1040,7 @@ int f_mkdir(string path, int mode) {
 	if (path == "." || path == ".." || path == "/") {
 		cout << "Invalid directory name." << endl;
 		return FAIL;
-	} else if (mode != EXEONLY && mode != WRONLY && mode != RDONLY) {
+	} else if (mode < EXEONLY || mode > (EXEONLY + WRONLY + RDONLY)) {
 		cout << "Illege permission mode." << endl;
 		return FAIL;
 	}
@@ -1063,10 +1063,61 @@ int f_mkdir(string path, int mode) {
 	}
 	// if it does not exist, create the new directory.
 	// using create_file by assuming this function is correct.
-	if (create_file(path_list[path_list.size()-1], parent_node, DIRECTORY_FILE, mode) == EXIT_FAILURE) {
+	int inode_index_for_new_dir = create_file(path_list[path_list.size()-1], parent_node, DIRECTORY_FILE, mode);
+	if (inode_index_for_new_dir == FAIL) {
 		cout << "Fail to create the new directory." << endl;
 		return FAIL;
 	}
+	// update the inode region and data block and write them back into the disk image
+	size_t data_address = BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE;
+	inode* inode_for_new_dir = disk_inode_region[inode_index_for_new_dir];
+	//cout << "New directory name: " << inode_for_new_dir->file_name << endl;
+	//cout << "New directory next inode: " << inode_for_new_dir->next_inode << endl;
+	//cout << "New directory nlink: " << inode_for_new_dir->nlink << endl;
+	//cout << "New directory's parent: " << inode_for_new_dir->parent << endl;
+	//cout << "New directory's permission: " << inode_for_new_dir->permission << endl;
+	//cout << "New directory's size: " << inode_for_new_dir->size << endl;
+	//cout << "New directory's type: " << inode_for_new_dir->type << endl;
+	//cout << "New directory's dblocks[0]: " << inode_for_new_dir->dblocks[0] << endl;
+	inode_for_new_dir->dblocks[0] = sb->free_block;
+	int first_data_block_index = inode_for_new_dir->dblocks[0];
+
+	// go to the head of the free block list, fetch the first 4 bytes to set it as the head
+	char free_block_char[BLOCK_SIZE];
+	lseek(disk, data_address + sb->free_block * BLOCK_SIZE, SEEK_SET);
+	read(disk, free_block_char, BLOCK_SIZE);
+	int *free_block = (int*) free_block_char;
+	//cout << "So the next free block is " << free_block[0] << endl;
+	sb->free_block = free_block[0];
+	
+	// update the superblock and write it back to the disk
+	update_sb();
+
+	size_t first_data_block_addr = data_address + first_data_block_index * BLOCK_SIZE;
+	char dir_buffer[BLOCK_SIZE];
+	if(lseek(disk, first_data_block_addr,SEEK_SET) < 0) {
+		perror("[f_mkdir] lseek fails\n");
+		return FAIL;
+	}
+	int updated_directory_size = 0;
+	// read from the disk into the buffer
+	read(disk, dir_buffer, BLOCK_SIZE);
+	directory_entry* entry = (directory_entry*)(dir_buffer);
+	entry[0].inode_entry = inode_index_for_new_dir;
+	strcpy(entry[0].file_name, ".");
+	updated_directory_size += sizeof(directory_entry);
+	entry[1].inode_entry = parent_node;
+	strcpy(entry[1].file_name, "..");
+	updated_directory_size += sizeof(directory_entry);
+	// write the first data block
+	lseek(disk, first_data_block_addr,SEEK_SET);
+	write(disk, dir_buffer, BLOCK_SIZE);
+	// update the inode region
+	inode_for_new_dir->size = updated_directory_size;
+	//inode_for_new_dir->dblocks[0] = 
+	//cout << "New directory's new size: " << inode_for_new_dir->size << endl;
+	lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->inode_offset * BLOCK_SIZE + inode_index_for_new_dir * sizeof(inode), SEEK_SET);
+	write(disk, inode_for_new_dir, sizeof(inode));
 	// if created successfully, return Success.
 	return SUCCESS;
 }
@@ -2399,10 +2450,10 @@ int f_close(int fd)
 	int inode_index = target_file->inode_entry; // get the inode index
 	inode* file_inode = disk_inode_region[inode_index]; // get the inode with the inode index
 	// if the file is a directory file
-	if (file_inode->type == DIRECTORY_FILE) {
-		f_closedir(fd); // invoke f_closedir to close the directory
-		return SUCCESS;
-	}
+	//if (file_inode->type == DIRECTORY_FILE) {
+	//	f_closedir(fd); // invoke f_closedir to close the directory
+	//	return SUCCESS;
+	//}
 	// if the file is a normal file
 	target_file->inode_entry = -1; // change the inode entry to -1
 	target_file->block_index = 0; // reset it back to 0.
@@ -2471,16 +2522,18 @@ int create_file(const string filename, int parent_inode, int type, int mode)
 	write(disk, disk_inode_region[cur_free_inode], sizeof(inode));
 
 	// put the file into open file table
-	for (int i = 0; i < MAX_OPEN_FILE; i++)
-	{
-		if (open_file_table[i]->inode_entry == -1)
+	if (type != DIRECTORY_FILE) {
+		for (int i = 0; i < MAX_OPEN_FILE; i++)
 		{
-			open_file_table[i]->inode_entry = cur_free_inode;
-			open_file_table[i]->byte_offset = 0;
-			open_file_table[i]->block_offset = 1;
-			open_file_table[i]->block_index = -1;
-			open_file_table[i]->mode = EXEONLY + WRONLY + RDONLY;
-			break;
+			if (open_file_table[i]->inode_entry == -1)
+			{
+				open_file_table[i]->inode_entry = cur_free_inode;
+				open_file_table[i]->byte_offset = 0;
+				open_file_table[i]->block_offset = 1;
+				open_file_table[i]->block_index = -1;
+				open_file_table[i]->mode = EXEONLY + WRONLY + RDONLY;
+				break;
+			}
 		}
 	}
 
@@ -2737,7 +2790,7 @@ int create_file(const string filename, int parent_inode, int type, int mode)
 	}
 	else
 	{
-		return EXIT_FAILURE;
+		return FAIL;
 	}
 
 	// write new directory entry to given position in the data block
