@@ -2345,7 +2345,7 @@ size_t f_write(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 	}
 	target_file->block_index = curr_block;
 	target_file->byte_offset = (BLOCK_SIZE - padding) % BLOCK_SIZE;
-
+	update_sb();
 	return return_value;
 }
 
@@ -2424,6 +2424,7 @@ int create_file(const string filename, int parent_inode, int type, int mode)
 	long data_block_offset = parent_size % BLOCK_SIZE;
 	int cur_free_inode = sb->free_inode;
 	int next_free_inode = disk_inode_region[cur_free_inode]->next_inode;
+	sb->free_inode = next_free_inode;
 	int file_descriptor = -1;
 	inode *parent = disk_inode_region[parent_inode];
 
@@ -2712,6 +2713,7 @@ int create_file(const string filename, int parent_inode, int type, int mode)
 	lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->inode_offset * BLOCK_SIZE + parent_inode * sizeof(inode), SEEK_SET);
 	write(disk, parent, sizeof(inode));
 	std::free(to_update);
+	update_sb();
 	return cur_free_inode;
 }
 
