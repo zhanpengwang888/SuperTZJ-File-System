@@ -1096,12 +1096,53 @@ int add_to_file_table(int inode_num, inode *f_node,int mode)
 	return i;
 }
 
+//find and delete the last entry and return its directory_entry node.
 directory_entry* deal_last_entry(int dirinode_index, string filename) {
 	//find the last entry in the directory, if the last one is the deleted one, return null
+	inode* cur = disk_inode_region[directory_index];
+	size_t size = cur->size;
+	bool flag = false;
+	int last_block_offset = size/BLOCK_SIZE + 1;
+	int last_byte_offset = size%BLOCK_SIZE;
+	//test printing
+	printf("test deal last entry print ****************************\n")
+	printf("last_block_offset %d\n",last_block_offset);
+	printf("last_byte offset %d\n",last_byte_offset);
 
+	//get the data block of the last entry
+	int last_block_index = get_index_by_offset(cur,last_block_offset);
+	printf("last_block_index %d\n",last_block_index);
+	//get the block of entry from disk
+	char* last_entry_block = (char*)(malloc(BLOCK_SIZE));
+	size_t last_entry_addr = BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + last_block_index * BLOCK_SIZE;
+	lseek(disk,last_entry_addr,SEEK_SET);
+	read(disk,BLOCK_SIZE,last_entry_block);
 
+	//use block to get the specific entry 
+	int last_entry_index = last_byte_offset%(sizeof(directory_entry));
+	printf("last_entry_index %d\n",last_entry_index);
+	directory_entry* entry_table = (directory_entry*)last_entry_block;
+	printf("last_entry filename is %s\n",entry_table[last_entry_index].filename);
+	printf("last_entry inode is %s\n",entry_table[last_entry_index].inode_entry);
+	//create a return directory entry
+	directory_entry* return_node = (directory_entry*)(malloc(sizeof(directory_entry)));
+	return_node->filename = entry_table[last_entry_index].filename;
+	return_node->inode_entry = entry_table[last_entry_index].inode_entry;
+	//if it is the last element, set the flag and return null
+	if(strcmp(entry_table[last_entry_index].filename,filename) == 0)
+		flag = true;
+	strcpy(entry_table[last_entry_index].filename,"");
+	entry_table[last_entry_index].inode_entry = 0;
+	//change the directory file size
+	cur->size -= sizeof(directory_entry);
+	//return the return_node
+	if(flag)
+		return NULL;
+	else
+		return return_node;
 
 }
+
 //similiar to traverse_dir ,but swap the last entry in directory with the entry we want to remove
 //first one need to find the specific entry we want to remove in the parent directory
 //we then find and delete the last entry in the parent directory
