@@ -2453,6 +2453,10 @@ int create_file(const string filename, int parent_inode, int type, int mode)
 		if (open_file_table[i]->inode_entry == -1)
 		{
 			open_file_table[i]->inode_entry = cur_free_inode;
+			open_file_table[i]->byte_offset = 0;
+			open_file_table[i]->block_offset = 1;
+			open_file_table[i]->block_index = -1;
+			open_file_table[i]->mode = EXEONLY + WRONLY + RDONLY;
 		}
 	}
 
