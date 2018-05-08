@@ -1099,13 +1099,13 @@ int add_to_file_table(int inode_num, inode *f_node,int mode)
 //find and delete the last entry and return its directory_entry node.
 directory_entry* deal_last_entry(int dirinode_index, char* filename) {
 	//find the last entry in the directory, if the last one is the deleted one, return null
-	inode* cur = disk_inode_region[directory_index];
+	inode* cur = disk_inode_region[dirinode_index];
 	size_t size = cur->size;
 	bool flag = false;
 	int last_block_offset = size/BLOCK_SIZE + 1;
 	int last_byte_offset = size%BLOCK_SIZE;
 	//test printing
-	printf("test deal last entry print ****************************\n")
+	printf("test deal last entry print ****************************\n");
 	printf("last_block_offset %d\n",last_block_offset);
 	printf("last_byte offset %d\n",last_byte_offset);
 
@@ -1116,22 +1116,22 @@ directory_entry* deal_last_entry(int dirinode_index, char* filename) {
 	char* last_entry_block = (char*)(malloc(BLOCK_SIZE));
 	size_t last_entry_addr = BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + last_block_index * BLOCK_SIZE;
 	lseek(disk,last_entry_addr,SEEK_SET);
-	read(disk,BLOCK_SIZE,last_entry_block);
+	read(disk,last_entry_block,BLOCK_SIZE);
 
 	//use block to get the specific entry 
 	int last_entry_index = last_byte_offset%(sizeof(directory_entry));
 	printf("last_entry_index %d\n",last_entry_index);
 	directory_entry* entry_table = (directory_entry*)last_entry_block;
-	printf("last_entry filename is %s\n",entry_table[last_entry_index].filename);
-	printf("last_entry inode is %s\n",entry_table[last_entry_index].inode_entry);
+	printf("last_entry filename is %s\n",entry_table[last_entry_index].file_name);
+	printf("last_entry inode is %d\n",entry_table[last_entry_index].inode_entry);
 	//create a return directory entry
 	directory_entry* return_node = (directory_entry*)(malloc(sizeof(directory_entry)));
-	return_node->filename = entry_table[last_entry_index].filename;
+	strcpy(return_node->file_name, entry_table[last_entry_index].file_name);
 	return_node->inode_entry = entry_table[last_entry_index].inode_entry;
 	//if it is the last element, set the flag and return null
-	if(strcmp(entry_table[last_entry_index].filename,filename) == 0)
+	if(strcmp(entry_table[last_entry_index].file_name,filename) == 0)
 		flag = true;
-	strcpy(entry_table[last_entry_index].filename,"");
+	strcpy(entry_table[last_entry_index].file_name,"");
 	entry_table[last_entry_index].inode_entry = 0;
 	//change the directory file size
 	cur->size -= sizeof(directory_entry);
@@ -1161,7 +1161,7 @@ int swap_entry(int dirinode_index, char* filename)
 		return FAIL;
 	}
 	// then, check if the given inode is a directory inode or not
-	if (!isLast && direct->type != DIRECTORY_FILE)
+	if (direct->type != DIRECTORY_FILE)
 	{
 		printf("This is not a directory.\n");
 		return FAIL;
@@ -1540,7 +1540,7 @@ int traverse_dir(int dirinode_index, string filename, bool isLast)
 }
 
 int remove_p_dir_entry(inode* parent,int parent_index) {
-	return swap_entry(parent_index,parent->filename);
+	return swap_entry(parent_index,parent->file_name);
 
 }
 int f_remove(const string path) {
