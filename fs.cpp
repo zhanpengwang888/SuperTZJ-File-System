@@ -25,6 +25,9 @@ vector<string> split(const string &s, char delim);
 int add_to_file_table(int inode_num, inode *f_node,int mode);
 int traverse_dir(int dirinode_index, string filename, bool isLast);
 int get_next_free_block(int block_index);
+void remove_p_dir_entry(inode* parent, int p_index);
+int swap_entry(int dirinode_index, string filename);
+directory_entry* deal_last_entry(int dirinode_index);
 
 //testing function
 void print_file_table();
@@ -1090,6 +1093,221 @@ int add_to_file_table(int inode_num, inode *f_node,int mode)
 	return i;
 }
 
+directory_entry* deal_last_entry(int dirinode_index, string filename) {
+	//find the last entry in the directory, if the last one is the deleted one, return null
+
+
+
+}
+//similiar to traverse_dir ,but swap the last entry in directory with the entry we want to remove
+//first one need to find the specific entry we want to remove in the parent directory
+//we then find and delete the last entry in the parent directory
+//use the return value( a directory entry struct) to replace the current entry
+//if succeed, return 0, else return -1
+int swap_entry(int dirinode_index, string filename)
+{
+	//bool IsExist = false;
+	//size_t size_of_disk = 6666666666;				  // IT MUST BE CHANGED LATER.
+	//char *disk_buffer = (char *)malloc(size_of_disk); // IMPORTANT: hard coded buffer that contains the disk image data!!!, This needs to be changed later.
+	// first, check if the given inode has an entry in the disk inode region (i.e., Check if the directory exists or not)
+	inode *direct = disk_inode_region[dirinode_index]; // get the directory
+	if (direct->nlink == 0)
+	{
+		printf("This directory does not exist.\n");
+		return FAIL;
+	}
+	// then, check if the given inode is a directory inode or not
+	if (!isLast && direct->type != DIRECTORY_FILE)
+	{
+		printf("This is not a directory.\n");
+		return FAIL;
+	}
+	// now lets check the data region to check if the given filename exists or not
+	// first, look into the direct data blocks
+	size_t remaining_size = direct->size; // get the size of the directory, and says it is the remaining size.
+	int data_offset = sb->data_offset;	// get the data offset from the super block
+	size_t data_region_starting_addr = BOOT_SIZE + SUPER_SIZE + data_offset * BLOCK_SIZE;
+	for (int i = 0; i < N_DBLOCKS; i++)
+	{
+		int data_block_index = direct->dblocks[i];
+		// one data block can have 16 directory entries
+		size_t directories_starting_region = data_region_starting_addr + BLOCK_SIZE * data_block_index;
+		for (int j = 0; j < BLOCK_SIZE / sizeof(directory_entry); j++)
+		{
+			// may not work! Logic seems to be fine.
+			lseek(disk, directories_starting_region + j * sizeof(directory_entry), SEEK_SET);
+			//char *entry_char = (char *)malloc(sizeof(directory_entry));
+			char entry_char[sizeof(directory_entry)];
+			read(disk, entry_char, sizeof(directory_entry));
+			directory_entry *entry = (directory_entry *)entry_char;
+			//directory_entry *entry = (directory_entry *)disk_buffer + directories_starting_region + j * sizeof(directory_entry); // get each directory entry
+			if (string(entry->file_name) == filename)
+			{
+				directory_entry* input = deal_last_entry(dirinode_index);
+				if(input != NULL) {
+					lseek(disk, directories_starting_region + j * sizeof(directory_entry), SEEK_SET);
+					write(disk,input,sizeof(directory_entry));
+				}
+				return SUCCESS;
+			}
+			remaining_size -= sizeof(directory_entry); // reducing the remaining size by 32 bytes.
+			if (remaining_size <= 0)
+			{
+				return FAIL;
+			}
+		}
+	}
+	// if the remaining_size is not 0, we still need to look into other data blocks.
+	// Then, look into the single indirect data blocks
+	size_t ptr_addr;
+	for (int i = 0; i < N_IBLOCKS; i++)
+	{
+		ptr_addr = data_region_starting_addr + BLOCK_SIZE * direct->iblocks[i];
+		char data_blocks_char[BLOCK_SIZE];
+		bzero(data_blocks_char, BLOCK_SIZE);
+		lseek(disk, ptr_addr, SEEK_SET);
+		read(disk, data_blocks_char, BLOCK_SIZE);
+		//memcpy(data_blocks_char, disk_buffer + ptr_addr, BLOCK_SIZE);
+		int *direct_data_block = (int *)data_blocks_char;
+		// loop through 128 direct data blocks pointers.
+		for (int j = 0; j < BLOCK_SIZE / sizeof(int); j++)
+		{
+			size_t dBlock_ptr_addr = data_region_starting_addr + BLOCK_SIZE * direct_data_block[j];
+			// loop through 16 directory entries.
+			for (int k = 0; k < BLOCK_SIZE / sizeof(directory_entry); k++)
+			{
+				lseek(disk, dBlock_ptr_addr + k * sizeof(directory_entry), SEEK_SET);
+				char entry_char[sizeof(directory_entry)];
+				read(disk, entry_char, sizeof(directory_entry));
+				directory_entry *entry = (directory_entry *)entry_char;
+				//directory_entry *entry = (directory_entry *)disk_buffer + dBlock_ptr_addr + k * sizeof(directory_entry);
+				if (string(entry->file_name) == filename)
+				{
+					directory_entry* input = deal_last_entry(dirinode_index);
+					if(input != NULL) {
+						lseek(disk,dBlock_ptr_addr + k * sizeof(directory_entry), SEEK_SET);
+						write(disk,input,sizeof(directory_entry));
+					}
+					return SUCCESS;
+				}
+				remaining_size -= sizeof(directory_entry);
+				if (remaining_size <= 0)
+				{
+					return FAIL;
+				}
+			}
+		}
+	}
+	// Next, look into the double indirect data blocks
+	size_t i2block_ptr_addr = data_region_starting_addr + direct->i2block * BLOCK_SIZE;
+	char indirect_data_blocks_chars[BLOCK_SIZE];
+	bzero(indirect_data_blocks_chars, BLOCK_SIZE);
+	lseek(disk, i2block_ptr_addr, SEEK_SET);
+	read(disk, indirect_data_blocks_chars, BLOCK_SIZE);
+	//memcpy(indirect_data_blocks_chars, disk_buffer + i2block_ptr_addr, BLOCK_SIZE);
+	int *indirect_data_blocks = (int *)indirect_data_blocks_chars;
+	// loop through 128 indirect data blocks
+	for (int i = 0; i < BLOCK_SIZE / sizeof(int); i++)
+	{
+		size_t idblock_ptr_addr = data_region_starting_addr + indirect_data_blocks[i] * BLOCK_SIZE;
+		char data_blocks_char[BLOCK_SIZE];
+		bzero(data_blocks_char, BLOCK_SIZE);
+		lseek(disk, idblock_ptr_addr, SEEK_SET);
+		read(disk, data_blocks_char, BLOCK_SIZE);
+		//memcpy(data_blocks_char, disk_buffer + idblock_ptr_addr, BLOCK_SIZE);
+		int *direct_data_block = (int *)data_blocks_char;
+		// loop through 128 direct data blocks pointers.
+		for (int j = 0; j < BLOCK_SIZE / sizeof(int); j++)
+		{
+			size_t dBlock_ptr_addr = data_region_starting_addr + BLOCK_SIZE * direct_data_block[j];
+			// loop through 16 directory entries.
+			for (int k = 0; k < BLOCK_SIZE / sizeof(directory_entry); k++)
+			{
+				lseek(disk, dBlock_ptr_addr + k * sizeof(directory_entry), SEEK_SET);
+				char entry_char[sizeof(directory_entry)];
+				read(disk, entry_char, sizeof(directory_entry));
+				directory_entry *entry = (directory_entry *)entry_char;
+				//directory_entry *entry = (directory_entry *)disk_buffer + dBlock_ptr_addr + k * sizeof(directory_entry);
+				if (string(entry->file_name) == filename)
+				{
+					directory_entry* input = deal_last_entry(dirinode_index);
+					if(input != NULL) {
+						lseek(disk,dBlock_ptr_addr + k * sizeof(directory_entry), SEEK_SET);
+						write(disk,input,sizeof(directory_entry));			
+					}		
+					return SUCCESS;
+				}
+				remaining_size -= sizeof(directory_entry);
+				if (remaining_size <= 0)
+				{
+					return FAIL;
+				}
+			}
+		}
+	}
+
+	// Finally, look into the triple indirect data blocks
+	size_t i3block_ptr_addr = data_region_starting_addr + direct->i3block * BLOCK_SIZE;
+	char i2blocks_char[BLOCK_SIZE];
+	bzero(i2blocks_char, BLOCK_SIZE);
+	lseek(disk, i3block_ptr_addr, BLOCK_SIZE);
+	read(disk, i2blocks_char, BLOCK_SIZE);
+	//memcpy(i2blocks_char, disk_buffer + i3block_ptr_addr, BLOCK_SIZE);
+	int *i2blocks = (int *)i2blocks_char;
+	// first, loop through 128 doubly indirect data blocks
+	for (int o = 0; o < BLOCK_SIZE / sizeof(int); o++)
+	{
+		size_t i2block_ptr_addr = data_region_starting_addr + i2blocks[o] * BLOCK_SIZE;
+		char indirect_data_blocks_chars[BLOCK_SIZE];
+		bzero(indirect_data_blocks_chars, BLOCK_SIZE);
+		lseek(disk, i2block_ptr_addr, BLOCK_SIZE);
+		read(disk, indirect_data_blocks_chars, BLOCK_SIZE);
+		//memcpy(indirect_data_blocks_chars, disk_buffer + i2block_ptr_addr, BLOCK_SIZE);
+		int *indirect_data_blocks = (int *)indirect_data_blocks_chars;
+		// loop through 128 indirect data blocks
+		for (int i = 0; i < BLOCK_SIZE / sizeof(int); i++)
+		{
+			size_t idblock_ptr_addr = data_region_starting_addr + indirect_data_blocks[i] * BLOCK_SIZE;
+			char data_blocks_char[BLOCK_SIZE];
+			bzero(data_blocks_char, BLOCK_SIZE);
+			lseek(disk, idblock_ptr_addr, BLOCK_SIZE);
+			read(disk, data_blocks_char, BLOCK_SIZE);
+			//memcpy(data_blocks_char, disk_buffer + idblock_ptr_addr, BLOCK_SIZE);
+			int *direct_data_block = (int *)data_blocks_char;
+			// loop through 128 direct data blocks pointers.
+			for (int j = 0; j < BLOCK_SIZE / sizeof(int); j++)
+			{
+				size_t dBlock_ptr_addr = data_region_starting_addr + BLOCK_SIZE * direct_data_block[j];
+				// loop through 16 directory entries.
+				for (int k = 0; k < BLOCK_SIZE / sizeof(directory_entry); k++)
+				{
+					lseek(disk, dBlock_ptr_addr + k * sizeof(directory_entry), SEEK_SET);
+					char entry_char[sizeof(directory_entry)];
+					read(disk, entry_char, sizeof(directory_entry));
+					directory_entry *entry = (directory_entry *)entry_char;
+					//directory_entry *entry = (directory_entry *)disk_buffer + dBlock_ptr_addr + k * sizeof(directory_entry);
+					if (string(entry->file_name) == filename)
+					{
+						directory_entry* input = deal_last_entry(dirinode_index,filename);
+						if(input != NULL) {
+							lseek(disk,dBlock_ptr_addr + k * sizeof(directory_entry), SEEK_SET);
+							write(disk,input,sizeof(directory_entry));	
+						}					
+						return SUCCESS;
+					}
+					remaining_size -= sizeof(directory_entry);
+					if (remaining_size <= 0)
+					{
+						return FAIL;
+					}
+				}
+			}
+		}
+	}
+	// if it still doesn't return, return a -1.
+	return FAIL;
+}
+
 // disk_buffer needs to be changed... I need the disk image to be in a buffer to get its data region.
 // use read and lseek
 // Maybe buggy...... Needs to be tested.
@@ -1318,6 +1536,9 @@ int f_remove(const string path) {
 	}
 	//if it exists, get the inode pointer
 	inode *target = disk_inode_region[dir_node];
+	//change the parent directory
+	inode *parent = disk_inode_region[target->parent];
+	remove_p_dir_entry(parent,target->parent);
 	//test printing before clean
 	printf("This is f_remove test printing!########################\n");
 	print_superblock(sb);
