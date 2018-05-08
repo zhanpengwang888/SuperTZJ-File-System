@@ -25,9 +25,9 @@ vector<string> split(const string &s, char delim);
 int add_to_file_table(int inode_num, inode *f_node,int mode);
 int traverse_dir(int dirinode_index, string filename, bool isLast);
 int get_next_free_block(int block_index);
-int remove_p_dir_entry(inode* parent, int p_index);
+int remove_p_dir_entry(char* file_name,int parent_index);
 int swap_entry(int dirinode_index, string filename);
-directory_entry* deal_last_entry(int dirinode_index,char* filename);
+directory_entry* deal_last_entry(int dirinode_index,const char* filename);
 
 //testing function
 void print_file_table();
@@ -1338,10 +1338,10 @@ int add_to_file_table(int inode_num, inode *f_node,int mode)
 }
 
 //find and delete the last entry and return its directory_entry node.
-directory_entry* deal_last_entry(int dirinode_index, char* filename) {
+directory_entry* deal_last_entry(int dirinode_index, const char* filename) {
 	//find the last entry in the directory, if the last one is the deleted one, return null
 	inode* cur = disk_inode_region[dirinode_index];
-	size_t size = cur->size;
+	size_t size = cur->size - sizeof(directory_entry);
 	bool flag = false;
 	int last_block_offset = size/BLOCK_SIZE + 1;
 	int last_byte_offset = size%BLOCK_SIZE;
@@ -1360,7 +1360,7 @@ directory_entry* deal_last_entry(int dirinode_index, char* filename) {
 	read(disk,last_entry_block,BLOCK_SIZE);
 
 	//use block to get the specific entry 
-	int last_entry_index = last_byte_offset%(sizeof(directory_entry));
+	int last_entry_index = last_byte_offset/(sizeof(directory_entry));
 	printf("last_entry_index %d\n",last_entry_index);
 	directory_entry* entry_table = (directory_entry*)last_entry_block;
 	printf("last_entry filename is %s\n",entry_table[last_entry_index].file_name);
@@ -1370,12 +1370,22 @@ directory_entry* deal_last_entry(int dirinode_index, char* filename) {
 	strcpy(return_node->file_name, entry_table[last_entry_index].file_name);
 	return_node->inode_entry = entry_table[last_entry_index].inode_entry;
 	//if it is the last element, set the flag and return null
-	if(strcmp(entry_table[last_entry_index].file_name,filename) == 0)
+	if(strcmp(entry_table[last_entry_index].file_name,filename) == 0) {
 		flag = true;
+		printf("It is the last element !!\n");
+	}
 	strcpy(entry_table[last_entry_index].file_name,"");
 	entry_table[last_entry_index].inode_entry = 0;
+	//write back to disk
+	lseek(disk,last_entry_addr,SEEK_SET);
+	write(disk,last_entry_block,BLOCK_SIZE);
 	//change the directory file size
 	cur->size -= sizeof(directory_entry);
+	//write back to inode region in disk
+	lseek(disk, BOOT_SIZE + SUPER_SIZE + dirinode_index * sizeof(inode), SEEK_SET);
+	write(disk, cur, sizeof(inode));
+	//need to update the openfile table
+
 	//return the return_node
 	if(flag)
 		return NULL;
@@ -1412,6 +1422,7 @@ int swap_entry(int dirinode_index, string filename)
 	size_t remaining_size = direct->size; // get the size of the directory, and says it is the remaining size.
 	printf("swap entry testing print! &&&&&&&&&&&&&&&&&&&&&&&&&&&&\n");
 	printf("remaining_size is %ld\n",remaining_size);
+	cout << "the file name is " << filename << endl;
 	int data_offset = sb->data_offset;	// get the data offset from the super block
 	size_t data_region_starting_addr = BOOT_SIZE + SUPER_SIZE + data_offset * BLOCK_SIZE;
 	for (int i = 0; i < N_DBLOCKS; i++)
@@ -1430,7 +1441,7 @@ int swap_entry(int dirinode_index, string filename)
 			//directory_entry *entry = (directory_entry *)disk_buffer + directories_starting_region + j * sizeof(directory_entry); // get each directory entry
 			if (string(entry->file_name) == filename)
 			{
-				directory_entry* input = deal_last_entry(dirinode_index,filename);
+				directory_entry* input = deal_last_entry(dirinode_index,filename.c_str());
 				if(input != NULL) {
 					lseek(disk, directories_starting_region + j * sizeof(directory_entry), SEEK_SET);
 					write(disk,input,sizeof(directory_entry));
@@ -1470,7 +1481,7 @@ int swap_entry(int dirinode_index, string filename)
 				//directory_entry *entry = (directory_entry *)disk_buffer + dBlock_ptr_addr + k * sizeof(directory_entry);
 				if (string(entry->file_name) == filename)
 				{
-					directory_entry* input = deal_last_entry(dirinode_index,filename);
+					directory_entry* input = deal_last_entry(dirinode_index,filename.c_str());
 					if(input != NULL) {
 						lseek(disk,dBlock_ptr_addr + k * sizeof(directory_entry), SEEK_SET);
 						write(disk,input,sizeof(directory_entry));
@@ -1517,7 +1528,7 @@ int swap_entry(int dirinode_index, string filename)
 				//directory_entry *entry = (directory_entry *)disk_buffer + dBlock_ptr_addr + k * sizeof(directory_entry);
 				if (string(entry->file_name) == filename)
 				{
-					directory_entry* input = deal_last_entry(dirinode_index,filename);
+					directory_entry* input = deal_last_entry(dirinode_index,filename.c_str());
 					if(input != NULL) {
 						lseek(disk,dBlock_ptr_addr + k * sizeof(directory_entry), SEEK_SET);
 						write(disk,input,sizeof(directory_entry));			
@@ -1575,7 +1586,7 @@ int swap_entry(int dirinode_index, string filename)
 					//directory_entry *entry = (directory_entry *)disk_buffer + dBlock_ptr_addr + k * sizeof(directory_entry);
 					if (string(entry->file_name) == filename)
 					{
-						directory_entry* input = deal_last_entry(dirinode_index,filename);
+						directory_entry* input = deal_last_entry(dirinode_index,filename.c_str());
 						if(input != NULL) {
 							lseek(disk,dBlock_ptr_addr + k * sizeof(directory_entry), SEEK_SET);
 							write(disk,input,sizeof(directory_entry));	
@@ -1782,8 +1793,8 @@ int traverse_dir(int dirinode_index, string filename, bool isLast)
 	return FAIL;
 }
 
-int remove_p_dir_entry(inode* parent,int parent_index) {
-	return swap_entry(parent_index,string(parent->file_name));
+int remove_p_dir_entry(char* file_name,int parent_index) {
+	return swap_entry(parent_index,string(file_name));
 
 }
 int f_remove(const string path) {
@@ -1835,7 +1846,7 @@ int f_remove(const string path) {
 	}
 	//change the parent directory
 	inode *parent = disk_inode_region[target->parent];
-	if(remove_p_dir_entry(parent,target->parent) < 0) {
+	if(remove_p_dir_entry(target->file_name,target->parent) < 0) {
 		printf("remove last entry fails!\n");
 		return EXIT_FAILURE;
 	}

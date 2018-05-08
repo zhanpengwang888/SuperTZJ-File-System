@@ -79,7 +79,7 @@ void print_directory(Superblock* sp, inode* dir_node, char* buffer) {
     cout <<"the block index is " << data_block_index << endl;
     // one data block can have 16 directory entries
     size_t directories_starting_region = data_region_starting_addr + BLOCK_SIZE * data_block_index;
-    cout << "the address we use is " << directories_starting_region << endl;
+    //cout << "the address we use is " << directories_starting_region << endl;
     for (int j = 0; j < BLOCK_SIZE / sizeof(directory_entry); j++)
     {
       // may not work! Logic seems to be fine.

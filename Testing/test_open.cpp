@@ -264,6 +264,7 @@ int main() {
 
 	
 	//test f_remove small file
+	/*
 	int test_fd = f_open("/test.txt","r");
 	f_close(test_fd);
 	f_remove("/test.txt");
@@ -284,6 +285,7 @@ int main() {
 	inode* inode_head = (inode*)(file_buffer + inode_start);
     inode* root = inode_head;
     print_directory(sp,root,file_buffer);
+    */
 	//also need to print root directory
 
 	
