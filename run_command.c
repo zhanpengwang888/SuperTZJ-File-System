@@ -6,6 +6,92 @@
 
 int last_backgrounded; // keep track of the last backgrounded job
 // built-in command: jobs
+char* get_cur_file_path(char* cur_dir, char* cur_filename) {
+	char* cur_file_path = (char*)malloc(256);
+	strcpy(cur_file_path,cur_dir);
+	strcat(cur_file_path,"/");
+	strcat(cur_file_path,cur_filename);
+	printf("cur_file is now %s\n",cur_file_path);
+	return cur_file_path;
+}
+//ls need to know the current directory path
+//readdir will return NULL if it is the end of directory
+void ls(int mode) {
+	//mode 1 is -F
+	//mode 2 is -l
+	int cur_dir = f_opendir(curr_path);
+	int cur_fd;
+	struct fileStat* f_status = (struct fileStat *)malloc(sizeof(fileStat));
+	if( cur_dir == -1) {
+		printf("there is something wrong with cur_dir, it is %s\n",curr_path);
+		//initalize cur_path and global_path
+	}
+	directory_entry* cur_entry;
+	while(1){
+		cur_entry = f_readdir(cur_dir);
+		if(cur_entry == NULL) {
+			//let the directory go back to the beginning
+			//f_seek(cur_dir,0,"SEEK_SET");
+			f_closedir(cur_dir);
+			return;
+		}
+		if(strcmp(cur_entry->file_name,".")== 0 || strcmp(cur_entry->file_name,"..") == 0) {
+			continue;
+		}
+		if(mode == 1) {
+			char* cur_file = get_cur_file_path(curr_path,cur_entry->file_name);
+			cur_fd = f_open(string(cur_file));
+			if(f_stat(cur_fd,f_status) < 0) {
+				printf("there are some problems reading this file\n");
+				continue;
+			}
+			if(f_status->type == DIRECTORY_FILE)
+				printf("%s%s\t",cur_entry->file_name,"/");
+			else if(f_status->permission == EXEONLY)
+				printf("%s%s\t",cur_entry->file_name,"*");
+			else
+				printf("%s\t",cur_entry->file_name);
+			free(cur_file);
+		}
+		else if(mode == 2) {
+			char* cur_file = get_cur_file_path(curr_path,cur_entry->file_name);
+			cur_fd = f_open(string(cur_file));
+			if(f_stat(cur_fd,f_status) < 0) {
+				printf("there are some problems reading this file\n");
+				continue;
+			}
+			char* p_char = (char*)(malloc(4));
+			switch(f_status->permission) {
+				case 1:
+					strcpy(p_char,"x--");
+					break;
+				case 2:
+					strcpy(p_char,"--w");
+					break;
+				case 3:
+					strcpy(p_char,"x-w");
+					break;
+				case 4:
+					strcpy(p_char,"-r-");
+					break;
+				case 5:
+					strcpy(p_char,"xr-");
+					break;
+				case 7:
+					strcpy(p_char,"xrw");
+					break;	
+			}
+			printf("%s   %d   %d    %ld    %s\n",p_char,f_status->uid,f_status->gid,f_status->size, cur_entry->file_name);
+			free(cur_file);
+			free(p_char);
+		}
+
+		//deal with deafult mode
+		else
+			printf("%s\t",cur_entry->file_name);
+	}
+
+}
 void bJobs()
 {
 	printList();
