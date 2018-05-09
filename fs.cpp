@@ -933,7 +933,14 @@ int f_opendir(string path)
 	}
 	// now let's add it into the open file table
 	inode *target_directory = disk_inode_region[dir_node];
-	int dirfd = add_to_file_table(dir_node, target_directory,RDONLY); // add it into the open file table
+	// check permission
+	if (target_directory->permission != RDONLY && 
+	target_directory->permission != (RDONLY + WRONLY) && 
+	target_directory->permission != (RDONLY + WRONLY + EXEONLY)) {
+		cout << "[f_opendir] Permission Denied" << endl;
+		return FAIL;
+	}
+	int dirfd = add_to_file_table(dir_node, target_directory,target_directory->permission); // add it into the open file table
 	return dirfd;
 }
 
@@ -941,7 +948,7 @@ int f_opendir(string path)
 // First call on f_readdir: gives the user the current directory, "."
 // Second call: gives the user the parent directory of the current directory, ".."
 // Third call: give the first entry under the current directory. Fourth call gives the second entry, etc.
-// Not tested yet. Potential buggy !!!!!!!!!!!!
+// Tested: seems to be fine.
 directory_entry *f_readdir(int dirfd) {
 	// check if the directory pointed by the dirfd has been openned or not
 	file_node *target_directory = open_file_table[dirfd]; // get the target directory
@@ -952,7 +959,7 @@ directory_entry *f_readdir(int dirfd) {
 	} else if (target_directory->inode_entry == -1) {
 		printf("This file has not been opened.\n");
 		return NULL;
-	} else if (target_directory->mode != RDONLY) {
+	} else if (target_directory->mode != RDONLY && target_directory->mode != RDONLY + WRONLY && target_directory->mode != RDONLY + WRONLY + EXEONLY) {
 		printf("Permission Denied.\n");
 		return NULL;
 	}
@@ -966,9 +973,9 @@ directory_entry *f_readdir(int dirfd) {
 	inode* target_directory_inode = disk_inode_region[target_directory->inode_entry];
 	int data_offset = sb->data_offset;
 	size_t data_region_starting_addr = BOOT_SIZE + SUPER_SIZE + data_offset * BLOCK_SIZE;
-	int num_of_directory_entries = target_directory_inode->size / (BLOCK_SIZE * sizeof(directory_entry)); // get the number of entries under this directory
+	int num_of_directory_entries = target_directory_inode->size / sizeof(directory_entry); // get the number of entries under this directory
 	// if the byte_offset is 0, that means we need to give the user the current directory, "."
-	if (counter >= target_directory_inode->size / BLOCK_SIZE) {
+	if (counter >= target_directory_inode->size / sizeof(directory_entry)) {
 		return NULL;
 	}
 
@@ -1006,11 +1013,12 @@ directory_entry *f_readdir(int dirfd) {
 		} 
 		else if (byte_offset >= BLOCK_SIZE) {
 			block_offset ++;
+			byte_offset = 0;
 			target_directory->block_offset = block_offset; // increment the block_offset by 1
-			target_directory->byte_offset = 0; // reset the byte_offset to 0
+			target_directory->byte_offset = sizeof(directory_entry); // reset the byte_offset to 0
 			target_directory->block_index = get_index_by_offset(target_directory_inode, block_offset); // get the block index.
 			open_file_table[dirfd] = target_directory; // update the open file table, maybe this step is unnecessary
-			if (lseek(disk, data_region_starting_addr + BLOCK_SIZE * block_index + byte_offset, SEEK_SET) == FAIL) {
+			if (lseek(disk, data_region_starting_addr + BLOCK_SIZE * target_directory->block_index + byte_offset, SEEK_SET) == FAIL) {
 				printf("[lseek in f_readdir] Fails");
 				return NULL;
 			}
@@ -1036,7 +1044,7 @@ int f_closedir(int dirfd) {
 
 // f_mkdir: 
 // if the directory already exists return Fail. Otherwise create a new directory.
-// Not Tested yet. Potential buggy.
+// Not Fully tested yet. 16 entries in the first data block are fine.
 int f_mkdir(string path, int mode) {
 	if (path == "." || path == ".." || path == "/") {
 		cout << "Invalid directory name." << endl;
