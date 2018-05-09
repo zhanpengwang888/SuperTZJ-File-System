@@ -1921,9 +1921,11 @@ int f_remove(const string path) {
 	printf("This is f_remove test printing!########################\n");
 	print_superblock(sb);
 	print_inode(target,dir_node,1);
-
+	
 	//superblock not be updated when create file
-	clean_file(target);
+	if(target->size > 0){
+		clean_file(target);
+	}
 	clean_inode(target, dir_node);
 	update_sb();
 
