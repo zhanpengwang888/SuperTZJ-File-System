@@ -25,5 +25,6 @@ extern int myShTerminal;
 extern pid_t myShPGid;
 extern struct termios myShTmodes;
 extern pid_t check_stat_pid;
+extern char* curr_path;
 
 #endif
