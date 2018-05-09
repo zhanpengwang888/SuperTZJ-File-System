@@ -329,16 +329,16 @@ int format_with_given_size(string filename, long int file_size)
 	default_inode->gid = 0;
 	for (int i = 0; i < N_DBLOCKS; i++)
 	{
-		default_inode->dblocks[i] = 0;
+		default_inode->dblocks[i] = -1;
 	}
 
 	for (int i = 0; i < N_IBLOCKS; i++)
 	{
-		default_inode->iblocks[i] = 0;
+		default_inode->iblocks[i] = -1;
 	}
 
-	default_inode->i2block = 0;
-	default_inode->i3block = 0;
+	default_inode->i2block = -1;
+	default_inode->i3block = -1;
 	//default_inode->file_name = "";
 	std::strcpy(default_inode->file_name, "");
 	//default_inode->padding = 0;

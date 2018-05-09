@@ -23,10 +23,11 @@ int main() {
 	//create_test_file("test");
 
 	//for testing mid size file
-	create_mid_file("test");
+	//create_mid_file("test");
 	//assume mount to root directory
 	f_mount("/","test");
 
+	/*
 	//test f_write small file
 	fd = f_open("/test.txt","r");
 	//get the inode region
@@ -58,5 +59,23 @@ int main() {
 		printf("the content we get from the test block is %s, its size is %d\n",test_block,out_size);
 	else
 		printf("something wrong about f_read or write or seek!\n");
+	return 0;
+	*/
+
+	//test large file seek
+	fd = f_open("/test.txt","a");
+	char* test_text = (char*)malloc(BLOCK_SIZE * 555);
+	for(int i = 0; i < 555; i ++) {
+		strcat(test_text,junk_c);
+	}
+	printf("the length of test_text is %d\n",strlen(test_text));
+	int w_size = f_write(test_text, strlen(test_text),1,fd);
+	f_close(fd);
+	fd = f_open("/test.txt","r");
+	//f_seek(fd,200000,"SEEK_SET");
+	char* test_block = (char*)malloc(BLOCK_SIZE);
+	int out_size = f_read(test_block,BLOCK_SIZE,1,fd);
+	printf("%s\n",test_block);
+	//printf("%s,size is %d\n",test_block,out_size);
 	return 0;
 }

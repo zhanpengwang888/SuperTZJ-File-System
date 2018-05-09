@@ -149,5 +149,6 @@ int main() {
 	}
 	*/
 	//print_free_blocks(file_buffer,sp);
+	printf("num of data block %d\n",(DEFAULT_SIZE - BOOT_SIZE - SUPER_SIZE - (sb->data_offset - sb->inode_offset) * BOOT_SIZE) / BOOT_SIZE);
 	return 0;
 }

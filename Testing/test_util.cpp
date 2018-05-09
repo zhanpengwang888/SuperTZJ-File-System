@@ -1,7 +1,16 @@
 #include "test_util.h"
 
 using namespace std;
-
+FILE* fp;
+char* file_buffer;
+Superblock *sp; // super block
+int inode_start;
+int inode_end;
+int inode_num;
+//file_node *open_file_table[MAX_OPEN_FILE];
+inode *disk_inode_list[MAX_INODE_NUM];
+std::string junk;
+const char* junk_c;
 void update_sp() {
  fseek(fp,BOOT_SIZE,SEEK_SET);
  fwrite(sp,sizeof(Superblock),1,fp);
@@ -340,5 +349,15 @@ void print_directory(Superblock* sp, inode* dir_node, char* buffer) {
       cout<< "the remaining size is " << remaining_size <<endl;
     }
   }
+
+}
+void print_iblock(inode* test_inode,char* buffer) {
+  int i_index = test_inode->iblocks[0];
+  if(i_index == -1)
+    return;
+  size_t iblock_region_starting_addr = BOOT_SIZE + SUPER_SIZE + sp->data_offset * BLOCK_SIZE + i_index * BLOCK_SIZE;
+  int* i_table = (int*)(buffer + iblock_region_starting_addr);
+  for(int i = 0; i < BLOCK_SIZE/sizeof(int);i++)
+    printf("the %d inode is %d\n",i,i_table[i]);
 
 }
