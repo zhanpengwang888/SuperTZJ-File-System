@@ -30,8 +30,15 @@ char *line;				  // the whole command line
 char *jobLine;			  // things we will store in job struct
 sigset_t child_mask;
 
+//user infor
 char* usr_name;
 char* sp_user_name;
+char* sp_user_password;
+char* user_password;
+int isSP = 0;
+//file related global
+char* curr_path;
+char* home_dir;
 
 int myShTerminal;
 pid_t myShPGid;
@@ -112,7 +119,55 @@ void ourPrompt()
 		printf("$");
 	return;
 }
+void parse_input(char* input) {
+	char *pos;
+	if ((pos=strchr(input, '\n')) != NULL)
+	    *pos = '\0';
+	else
+	    /* input too long for buffer, flag error */
+	    printf("weird thing happens\n");
+	printf("the input after parse is %s\n",input);
+}
 
+
+int login() {
+	//let user login
+	printf("user name %s,  password %s\n",usr_name,user_password);
+	char name[MAXLEN];
+	char pw[MAXLEN];
+	printf("Please enter your username:\n");
+	fgets(name,MAXLEN,stdin);
+	parse_input(name);
+	printf("the username is %s\n",name);
+	//parse the name
+	printf("Please enter your password:\n");
+	fgets(pw,MAXLEN,stdin);
+	parse_input(pw);
+	printf("the pw is %s\n",pw);
+	if((strcmp(name,sp_user_name) == 0) && (strcmp(pw,sp_user_password) == 0)) {
+		isSP = 1;
+		printf("Hi My dear super user, welcome back to bugfree file system!\n");
+	}
+	else if((strcmp(name,usr_name) == 0) && (strcmp(pw,user_password) == 0)) {
+		printf("Welcome to our file system\n");
+	}
+	else {
+		printf("%d       %d\n",(strcmp(name,usr_name) == 0),(strcmp(pw,user_password) == 0));
+		printf("Invalid user or incorrect password\n");
+		return FAIL;
+	}
+	//make a user home directory 
+	home_dir = (char*)malloc(MAXLEN + 1);
+	strcpy(home_dir, "/");
+	strcat(home_dir,name);
+	printf("home dir will be %s\n",home_dir);
+	int status = f_mkdir(string(home_dir),7);
+	//initalize cur_path and global_path
+	curr_path = (char*)malloc(MAXLEN);
+	strcpy(curr_path,home_dir);
+	return SUCCESS;
+
+}
 void initShell()
 {
 	myShTerminal = STDOUT_FILENO;
@@ -159,6 +214,22 @@ void initShell()
 		    	return;
 		    }
 		}
+	}
+	//prompt user log in 
+	//init user info
+	usr_name = (char*)malloc(MAXLEN);
+	sp_user_name = (char*)malloc(MAXLEN);
+	user_password = (char*)malloc(MAXLEN);
+	sp_user_password = (char*)malloc(MAXLEN);
+	strcpy(usr_name,"mark");
+	strcpy(sp_user_name,"Mark");
+	strcpy(user_password,"6666");
+	strcpy(sp_user_password,"7777");
+
+
+	int status = login();
+	if(status < 0) {
+		exit(1);
 	}
 
 }
