@@ -1042,102 +1042,6 @@ int f_closedir(int dirfd) {
 	return f_close(dirfd);
 }
 
-// f_mkdir: 
-// if the directory already exists return Fail. Otherwise create a new directory.
-// Not Fully tested yet. 16 entries in the first data block are fine.
-int f_mkdir(string path, int mode) {
-	if (path == "." || path == ".." || path == "/") {
-		cout << "Invalid directory name." << endl;
-		return FAIL;
-	} else if (mode < EXEONLY || mode > (EXEONLY + WRONLY + RDONLY)) {
-		cout << "Illege permission mode." << endl;
-		return FAIL;
-	}
-	//parse the path to know the filename
-	vector<string> path_list = split(path, '/');
-	for (int i = 0; i < path_list.size(); i++)
-	{
-		cout << "This element is " << path_list[i] << endl;
-	}
-	int dir_node = sb->root;
-	int parent_node; // to get the parent directory inode of the 
-	// check if the directory has already existed.
-	for (int i = 0; i < path_list.size(); i++){
-		parent_node = dir_node;
-		dir_node = traverse_directory(dir_node, path_list[i]);
-		if (i == path_list.size() -1) {
-			if (dir_node != FAIL) {
-				cout << "The directory " << path_list[i] <<  " has already existed." << endl;
-				return FAIL;
-			}
-		} else {
-			if (dir_node == FAIL) {
-				cout << "The directory" << path_list[i] <<  " does not exist." << endl;
-				return FAIL;
-			}
-		}
-	}
-	// if it does not exist, create the new directory.
-	// using create_file by assuming this function is correct.
-	int inode_index_for_new_dir = create_file(path_list[path_list.size()-1], parent_node, DIRECTORY_FILE, mode);
-	if (inode_index_for_new_dir == FAIL) {
-		cout << "Fail to create the new directory." << endl;
-		return FAIL;
-	}
-	// update the inode region and data block and write them back into the disk image
-	size_t data_address = BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE;
-	inode* inode_for_new_dir = disk_inode_region[inode_index_for_new_dir];
-	//cout << "New directory name: " << inode_for_new_dir->file_name << endl;
-	//cout << "New directory next inode: " << inode_for_new_dir->next_inode << endl;
-	//cout << "New directory nlink: " << inode_for_new_dir->nlink << endl;
-	//cout << "New directory's parent: " << inode_for_new_dir->parent << endl;
-	//cout << "New directory's permission: " << inode_for_new_dir->permission << endl;
-	//cout << "New directory's size: " << inode_for_new_dir->size << endl;
-	//cout << "New directory's type: " << inode_for_new_dir->type << endl;
-	//cout << "New directory's dblocks[0]: " << inode_for_new_dir->dblocks[0] << endl;
-	inode_for_new_dir->dblocks[0] = sb->free_block;
-	int first_data_block_index = inode_for_new_dir->dblocks[0];
-
-	// go to the head of the free block list, fetch the first 4 bytes to set it as the head
-	char free_block_char[BLOCK_SIZE];
-	lseek(disk, data_address + sb->free_block * BLOCK_SIZE, SEEK_SET);
-	read(disk, free_block_char, BLOCK_SIZE);
-	int *free_block = (int*) free_block_char;
-	cout << "So the next free block is " << free_block[0] << "   " << sb->free_block << endl;
-	sb->free_block = free_block[0];
-	
-	// update the superblock and write it back to the disk
-	update_sb();
-
-	size_t first_data_block_addr = data_address + first_data_block_index * BLOCK_SIZE;
-	char dir_buffer[BLOCK_SIZE];
-	if(lseek(disk, first_data_block_addr,SEEK_SET) < 0) {
-		perror("[f_mkdir] lseek fails\n");
-		return FAIL;
-	}
-	int updated_directory_size = 0;
-	// read from the disk into the buffer
-	read(disk, dir_buffer, BLOCK_SIZE);
-	directory_entry* entry = (directory_entry*)(dir_buffer);
-	entry[0].inode_entry = inode_index_for_new_dir;
-	strncpy(entry[0].file_name, ".", sizeof(entry[0].file_name));
-	updated_directory_size += sizeof(directory_entry);
-	entry[1].inode_entry = parent_node;
-	strncpy(entry[1].file_name, "..", sizeof(entry[1].file_name));
-	updated_directory_size += sizeof(directory_entry);
-	// write the first data block
-	lseek(disk, first_data_block_addr,SEEK_SET);
-	write(disk, dir_buffer, BLOCK_SIZE);
-	// update the inode region
-	inode_for_new_dir->size = updated_directory_size;
-	//inode_for_new_dir->dblocks[0] = 
-	//cout << "New directory's new size: " << inode_for_new_dir->size << endl;
-	lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->inode_offset * BLOCK_SIZE + inode_index_for_new_dir * sizeof(inode), SEEK_SET);
-	write(disk, inode_for_new_dir, sizeof(inode));
-	// if created successfully, return Success.
-	return SUCCESS;
-}
-
 // f_rmdir: using f_remove to recursively remove the given directory. It is very slow...
 // Need to be tested. Potential very buggy.
 int f_rmdir(string filepath) {
@@ -1187,7 +1091,7 @@ int f_rmdir(string filepath) {
 			// check if it is a directory or a file.
 			char *name = entry->file_name;
 			int inode_index_of_file = entry->inode_entry;
-			if (string(name) != "." && string(name) != "..") {
+			if (string(name) != "." && string(name) != ".." && inode_index_of_file != -1) {
 				if (disk_inode_region[inode_index_of_file]->type == DIRECTORY_FILE) {
 					string directory_path_string = filepath + "/" + string(name);
 					f_rmdir(directory_path_string);
@@ -1235,12 +1139,14 @@ int f_rmdir(string filepath) {
 				// check if it is a directory or a file.
 				char *name = entry->file_name;
 				int inode_index_of_file = entry->inode_entry;
-				if (disk_inode_region[inode_index_of_file]->type == DIRECTORY_FILE) {
-					string directory_path_string = filepath + "/" + string(name);
-					f_rmdir(directory_path_string);
-				} else {
-					string file_path_string = filepath + "/" + string(name);
-					f_remove(file_path_string);
+				if (inode_index_of_file != -1) {
+					if (disk_inode_region[inode_index_of_file]->type == DIRECTORY_FILE) {
+						string directory_path_string = filepath + "/" + string(name);
+						f_rmdir(directory_path_string);
+					} else {
+						string file_path_string = filepath + "/" + string(name);
+						f_remove(file_path_string);
+					}
 				}
 				remaining_size -= sizeof(directory_entry); // reducing the remaining size by 32 bytes.
 				if (remaining_size <= sizeof(directory_entry) * 2) {
@@ -1286,12 +1192,14 @@ int f_rmdir(string filepath) {
 				// check if it is a directory or a file.
 				char *name = entry->file_name;
 				int inode_index_of_file = entry->inode_entry;
-				if (disk_inode_region[inode_index_of_file]->type == DIRECTORY_FILE) {
-					string directory_path_string = filepath + "/" + string(name);
-					f_rmdir(directory_path_string);
-				} else {
-					string file_path_string = filepath + "/" + string(name);
-					f_remove(file_path_string);
+				if (inode_index_of_file != -1) {
+					if (disk_inode_region[inode_index_of_file]->type == DIRECTORY_FILE) {
+						string directory_path_string = filepath + "/" + string(name);
+						f_rmdir(directory_path_string);
+					} else {
+						string file_path_string = filepath + "/" + string(name);
+						f_remove(file_path_string);
+					}
 				}
 				remaining_size -= sizeof(directory_entry); // reducing the remaining size by 32 bytes.
 				if (remaining_size <= sizeof(directory_entry) * 2) {
@@ -1348,12 +1256,14 @@ int f_rmdir(string filepath) {
 					// check if it is a directory or a file.
 					char *name = entry->file_name;
 					int inode_index_of_file = entry->inode_entry;
-					if (disk_inode_region[inode_index_of_file]->type == DIRECTORY_FILE) {
-						string directory_path_string = filepath + "/" + string(name);
-						f_rmdir(directory_path_string);
-					} else {
-						string file_path_string = filepath + "/" + string(name);
-						f_remove(file_path_string);
+					if (inode_index_of_file != -1) {
+						if (disk_inode_region[inode_index_of_file]->type == DIRECTORY_FILE) {
+							string directory_path_string = filepath + "/" + string(name);
+							f_rmdir(directory_path_string);
+						} else {
+							string file_path_string = filepath + "/" + string(name);
+							f_remove(file_path_string);
+						}
 					}
 					remaining_size -= sizeof(directory_entry); // reducing the remaining size by 32 bytes.
 					if (remaining_size <= sizeof(directory_entry) * 2) {
