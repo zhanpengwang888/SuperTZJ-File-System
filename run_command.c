@@ -464,7 +464,7 @@ int fs_cd(char **args, int argn) {
 		}
 		else {
 			f_closedir(fd);
-			bzero(curr_path, MAX_LEN);
+			bzero(curr_path, 256);
 			strcpy(curr_path, args[1]);
 			return SUCCESS;
 		}
@@ -472,7 +472,7 @@ int fs_cd(char **args, int argn) {
 	else {
 		strcpy(tocheck, curr_path);
 		strcat(tocheck, args[1]);
-		fd = f_opendir(str(args[1]));
+		fd = f_opendir(string(args[1]));
 		if (fd < 0) {
 			free(tocheck);
 			return FAIL;
@@ -491,7 +491,7 @@ void fs_pwd() {
 	char* temp = malloc(256);
 	strcpy(temp, curr_path);
 	free(curr_path);
-	curr_path = pwd(str(curr_path));
+	curr_path = pwd(string(curr_path));
 	free(temp);
 	printf("%s\n", curr_path);
 }
@@ -506,7 +506,7 @@ void fs_chmod(char **args, int argn) {
 	else if (strcmp(args[0], "chmod") != 0) {
 		return FAIL;
 	}
-	change_mode(atoi(args[1]), args[2]);
+	change_mode(atoi(args[1]), string(args[2]));
 }
 
 
@@ -518,7 +518,7 @@ int fs_mkdir(char** args, int argn) {
 		return FAIL;
 	}
 	else {
-		return f_mkdir(args[2], atoi(args[1]));
+		return f_mkdir(string(args[2]), atoi(args[1]));
 	}
 }
 
@@ -527,7 +527,7 @@ int fs_rmdir(char** args, int argn) {
 		return FAIL;
 	}
 	else {
-		return f_rmdir(args[1]);
+		return f_rmdir(string(args[1]));
 	}
 }
 
