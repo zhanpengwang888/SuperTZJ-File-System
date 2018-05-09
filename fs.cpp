@@ -2911,7 +2911,7 @@ int change_mode(int mode, string path) {
 	int fd;
 	int inode_index;
 	inode* this_inode;
-	fd = f_open(path);
+	fd = f_open(path, "r+");
 	if (mode > 7 || mode < 0) {
 		return FAIL;
 	}
@@ -2942,19 +2942,19 @@ int change_mode(int mode, string path) {
 
 char* pwd(string file_path) {
 	int fd;
-	char* to_return = malloc(256);
-	char* transfer_buffer = malloc(256);
+	char* to_return = (char*) malloc(256);
+	char* transfer_buffer = (char*) malloc(256);
 	bzero(to_return, 256);
 	bzero(transfer_buffer, 256);
 	int inode_index;
 	file_node* curr_file;
 	inode* curr_inode;
-	fd = f_open(file_path);
+	fd = f_open(file_path, "r+");
 	if (fd == FAIL) {
 		fd = f_opendir(file_path);
 	}
 	if (fd == FAIL) {
-		retun NULL;
+		return NULL;
 	}
 	else {
 		curr_file = open_file_table[fd];
