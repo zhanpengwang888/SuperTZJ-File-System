@@ -82,7 +82,7 @@ void ls(int mode) {
 					strcpy(p_char,"xrw");
 					break;	
 			}
-			printf("%s   %d   %d    %ld    %s\n",p_char,f_status->uid,f_status->gid,f_status->size, cur_entry->file_name);
+			printf("%s   %d   %d    %ld    %s\n",p_char,f_status->uid,f_status->gid,f_status->filesize, cur_entry->file_name);
 			free(cur_file);
 			free(p_char);
 		}
@@ -496,7 +496,7 @@ void fs_pwd() {
 	printf("%s\n", curr_path);
 }
 
-void fs_chmod(char **args, int argn) {
+int fs_chmod(char **args, int argn) {
 	if (argn != 3) {
 		return FAIL;
 	}
@@ -506,7 +506,7 @@ void fs_chmod(char **args, int argn) {
 	else if (strcmp(args[0], "chmod") != 0) {
 		return FAIL;
 	}
-	change_mode(atoi(args[1]), string(args[2]));
+	return change_mode(atoi(args[1]), string(args[2]));
 }
 
 
