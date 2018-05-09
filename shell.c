@@ -11,7 +11,7 @@ structure inspired by: https://github.com/jmreyes/simple-c-shell/blob/master/sim
 #include "parser.h"
 #include "run_command.h"
 #include "ll.h"
-#include "fs.h"
+//#include "fs.h"
 
 #define MAXLEN 256
 #define MAXLINE 1024
@@ -29,6 +29,15 @@ char **command;			  // command line that has been separated by ";"
 char *line;				  // the whole command line
 char *jobLine;			  // things we will store in job struct
 sigset_t child_mask;
+
+char* usr_name;
+char* sp_user_name;
+
+int myShTerminal;
+pid_t myShPGid;
+struct termios myShTmodes;
+pid_t check_stat_pid;
+int last_suspended;    // keep track of the last suspended job                                                                                                           
 
 void sigchld_handler(int sig, siginfo_t *sif, void *notused)
 {
@@ -122,8 +131,8 @@ void initShell()
 		}
 	}
 	//ready for file system set up
-	strcpy(usr_name,"usr_default");
-	strcpy(sp_user_name,"sp_default");
+	//strcpy(usr_name,"usr_default");
+	//strcpy(sp_user_name,"sp_default");
 
 	//check whether the disk exists
 	if( access( "DISK", F_OK ) != -1 ) {
@@ -156,7 +165,7 @@ void initShell()
 
 int main(int argc, char **argv)
 {
-	//jobInit();
+	jobInit();
 	initShell();
 	int built_in_flag = FALSE;
 	check_stat_pid = -10;

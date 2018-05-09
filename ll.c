@@ -1,4 +1,7 @@
 #include "ll.h"
+Node *head;
+Node *tail;
+int id;
 
 void jobInit()
 {
