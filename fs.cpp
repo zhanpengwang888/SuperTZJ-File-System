@@ -2073,12 +2073,23 @@ size_t f_read(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 			if (0 < remaining_size && remaining_size <= BLOCK_SIZE) {
 				tmp_ptr  = (void*)((char*)restrict_ptr + tmp + BLOCK_SIZE * i);
 				int test = read(disk, tmp_ptr, remaining_size);
+				printf("the test tmp_ptr now is %s and %d\n",(char*)tmp_ptr,test);
 				//printf("the test tmp_ptr now is %s and %d\n",(char*)tmp_ptr,test);
-				byte_offset = remaining_size; // since the last block has the byte offset to be 0, the new byte offset will be remaining size - 0
-				target_file->byte_offset = byte_offset; // update byte_offset
-				target_file->block_offset = block_offset; // update block_offset
-				target_file->block_index = block_index; // update block_index
-				open_file_table[fd] = target_file; // put the new file node into the open file table.
+				if (remaining_size == BLOCK_SIZE) {
+					byte_offset = 0;
+					block_offset ++;
+					target_file->byte_offset = byte_offset; // update byte_offset
+					target_file->block_offset = block_offset; // update block_offset
+					target_file->block_index = block_index; // update block_index
+					open_file_table[fd] = target_file; // put the new file node into the open file table.
+				}
+				else {
+					byte_offset = remaining_size; // since the last block has the byte offset to be 0, the new byte offset will be remaining size - 0
+					target_file->byte_offset = byte_offset; // update byte_offset
+					target_file->block_offset = block_offset; // update block_offset
+					target_file->block_index = block_index; // update block_index
+					open_file_table[fd] = target_file; // put the new file node into the open file table.
+				}
 				//testing print
 				print_file_status(fd);
 				return size_requested;
@@ -2132,7 +2143,7 @@ size_t f_write(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 	else {
 		blocks_needed = blocks_needed / BLOCK_SIZE + 1;
 	}
-	int padding = starting_size + blocks_needed * BLOCK_SIZE - curr_offset - num_byte_need_to_copy;
+	int padding = blocks_needed * BLOCK_SIZE - curr_offset - num_byte_need_to_copy;
 	if (padding > 511) {
 		printf("I died here! It sucks!!!\n");
 		return FAIL;
@@ -2149,6 +2160,7 @@ size_t f_write(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 	memcpy(transfer_buffer, restrict_ptr, num_byte_need_to_copy);
 	long block_to_write = -1;
 	for (int i = 0; i < blocks_needed; i++) {
+		//printf("The global variable is %d\n\n", NUM_INODE_IN_BLOCK);
 		data_block_index = starting_size / BLOCK_SIZE;
 		// cases when we rewrite current block
 		if (i == 0 && curr_offset != 0) {
@@ -2178,7 +2190,8 @@ size_t f_write(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 			new_data_block = sb->free_block;
 			sb->free_block = get_next_free_block(sb->free_block);
 			int i1block_index = (data_block_index) / NUM_INODE_IN_BLOCK;
-			int i1block_offset = (data_block_index) % NUM_INODE_IN_BLOCK;
+			int i1block_offset;
+			i1block_offset = (data_block_index) % (NUM_INODE_IN_BLOCK);
 			if (i1block_offset == 0){
 				int new_data_block_for_i1;
 				new_data_block_for_i1 = sb->free_block;
@@ -2196,6 +2209,7 @@ size_t f_write(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 				lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + inode_of_file->iblocks[i1block_index] * BLOCK_SIZE, SEEK_SET);
 				write(disk, i1block_buffer, BLOCK_SIZE);
 				std::free(i1block_buffer);
+				printf("new_data_block is %d, i1block_offset is %d\n\n", new_data_block, i1block_offset);
 			}
 			else {
 				void *i1block_buffer = malloc(BLOCK_SIZE);
@@ -2204,9 +2218,11 @@ size_t f_write(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 				int *inode_i1bloc = NULL;
 				inode_i1bloc = (int *)(i1block_buffer);
 				inode_i1bloc[i1block_offset] = new_data_block;
+				printf("new_data_block is %d, i1block_offset is %d\n\n", new_data_block, i1block_offset);
 				lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + i1block_index * BLOCK_SIZE, SEEK_SET);
 				write(disk, i1block_buffer, BLOCK_SIZE);
 				std::free(i1block_buffer);
+
 			}			
 			block_to_write = new_data_block;
 			transfer_buffer = (void*) ((char*) rounded_buffer + i * BLOCK_SIZE);
@@ -2227,7 +2243,7 @@ size_t f_write(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 			int *i2block_inode = (int *)i2block_buffer;
 			// calculate index and offset in the given i1block
 			int i1block_index = i2block_inode[i2block_offset];
-			int i1block_offset = (data_block_index) % NUM_INODE_IN_BLOCK;
+			int i1block_offset = (data_block_index) % (NUM_INODE_IN_BLOCK);
 			if (i1block_offset == 0) {
 				int new_data_block_for_i1;
 				new_data_block_for_i1 = sb->free_block;
@@ -2290,7 +2306,7 @@ size_t f_write(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 
 			// calculate which data block of i1block we will step into
 			int i1block_index = i2block_inode[i2block_offset];
-			int i1block_offset = (data_block_index) % NUM_INODE_IN_BLOCK;
+			int i1block_offset = (data_block_index) % (NUM_INODE_IN_BLOCK);
 
 			void *i1block_buffer = malloc(BLOCK_SIZE);
 			// read data block from i1block
@@ -2373,9 +2389,18 @@ size_t f_write(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 		target_file->block_offset = starting_size / BLOCK_SIZE;
 	}
 	target_file->block_index = curr_block;
+	printf("I am fucking here, and the block index is %d------------------------------------\n", target_file->block_index);
 	target_file->byte_offset = (BLOCK_SIZE - padding) % BLOCK_SIZE;
 	print_file_status(fd);
 	update_sb();
+
+	// int temp = sb->free_block;
+	// for (int i = 0 ; i < 20; i++) {
+	// 	printf("I am printing free block, the free block is %d\n", sb->free_block);
+	// 	sb->free_block = get_next_free_block(sb->free_block);
+	// }
+	// sb->free_block = temp;
+
 	return return_value;
 }
 
@@ -2512,7 +2537,7 @@ int create_file(const string filename, int parent_inode, int type, int mode)
 			data_block_index = 0;
 		}
 		int i1block_index = (data_block_index) / NUM_INODE_IN_BLOCK;
-		int i1block_offset = (data_block_index) % NUM_INODE_IN_BLOCK; // whether take 1 off here?
+		int i1block_offset = (data_block_index) % (NUM_INODE_IN_BLOCK); // whether take 1 off here?
 		// if we need a new data block
 		if (data_block_offset == 0){
 			int new_data_block;
@@ -2576,7 +2601,7 @@ int create_file(const string filename, int parent_inode, int type, int mode)
 		int *i2block_inode = (int *)i2block_buffer;
 		// calculate index and offset in the given i1block
 		int i1block_index = i2block_inode[i2block_offset];
-		int i1block_offset = (data_block_index) % NUM_INODE_IN_BLOCK;
+		int i1block_offset = (data_block_index) % (NUM_INODE_IN_BLOCK);
 		// we need a new data block
 		if (data_block_offset == 0) {
 			int new_data_block;
@@ -2654,7 +2679,7 @@ int create_file(const string filename, int parent_inode, int type, int mode)
 
 		// calculate which data block of i1block we will step into
 		int i1block_index = i2block_inode[i2block_offset];
-		int i1block_offset = (data_block_index) % NUM_INODE_IN_BLOCK;
+		int i1block_offset = (data_block_index) % (NUM_INODE_IN_BLOCK);
 
 		void *i1block_buffer = malloc(BLOCK_SIZE);
 		// read data block from i1block
