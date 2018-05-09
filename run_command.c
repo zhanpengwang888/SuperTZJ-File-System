@@ -405,6 +405,265 @@ void bBg(char **args, int argn)
 		perror("kill (SIGCONT)");
 }
 
+// cat built-in command implementation starts here
+// Not Tested yet. Potential buggy.
+// get the keyboard input from stdin and write it into a file.
+void microcat_stdin(int file_descriptor_to_be_written)
+{
+  int wr;
+  char buf[1];
+  while (read(0, buf, sizeof buf) > 0)
+  {
+    wr = f_write(buf, sizeof(buf), 1, file_descriptor_to_be_written);
+	//write(file_descriptor_to_be_written, buf, sizeof buf);
+    if (wr < 0)
+    {
+		printf("[microcat_stdin] Fails\n");
+		break;
+    }
+  }
+}
+
+// get the keyboard input from stdin and write it into a file.
+// syscall version
+void microcat_stdin_using_syscall(int file_descriptor_to_be_written)
+{
+  int wr;
+  char buf[1];
+  while (read(0, buf, sizeof buf) > 0)
+  {
+    wr = write(file_descriptor_to_be_written, buf, sizeof buf);
+    if (wr < 0)
+    {
+		printf("[microcat_stdin] Fails\n");
+		break;
+    }
+  }
+}
+
+// check if there is a redirection '>' or ">>" or '<' in the give arguments
+// check if the command only has > redirection.
+int only_right_redirection(char **arg, int size)
+{
+  for (int i = 1; i < size; i++)
+  {
+    if (*arg[i] == '<')
+      return FALSE;
+  }
+  return TRUE;
+}
+
+// check if it is the right redirection ">"
+int IsRightRedirection(char **arg, int size)
+{
+	if(only_right_redirection(arg, size))
+		return FALSE;
+	string command = string(conversion(arg, size));
+	vector<string> command_string_list = split(command, '>'); // split it by '>'
+	vector<string> command_string_list_double = split(command, '>>'); // split by ">>"
+	if (command_string_list.size() > 1 && command_string_list_double.size() <= 1)
+		return TRUE;
+	return FALSE;
+}
+
+// check if the command only has < redirection.
+int only_left_redirection(char **arg, int size)
+{
+  for (int i = 1; i < size; i++)
+  {
+    if (*arg[i] == '>')
+      return FALSE;
+  }
+  return TRUE;
+}
+
+// check if it is the left redirection "<"
+int IsLeftRedirection(char **arg, int size)
+{
+	if(only_left_redirection(arg, size))
+		return FALSE;
+	string command = string(conversion(arg, size));
+	vector<string> command_string_list = split(command, '<'); // split it by '>'
+	if (command_string_list > 1)
+		return TRUE;
+	return FALSE;
+}
+
+string conversion(char **arg, int size) {
+	string temp = "";
+	for (int i = 1; i < size; i++) {
+		temp += *arg[i];
+	}
+	return temp;
+}
+
+// check if the command is double redirection
+int doubleRedirection(char **arg, int size) {
+	string command = string(conversion(arg, size));
+	vector<string> command_string_list = split(command, '>>'); // split it by ">>"
+	if (command_string_list > 1)
+		return TRUE;
+	return FALSE;
+}
+
+// our fs version
+void microcat(const char *file_name, int file_descriptor_to_be_written)
+{
+  int fd, wr, rd;
+  fd = f_open(string(file_name), "r");
+  //(file_name, O_RDONLY);
+
+  int size_of_file = get_file_size(string(file_name));
+  char buffer[size_of_file + 1];
+
+  // error checking and handling
+  if (fd < 0)
+  {
+	cout << "[cat] No such file or directory" << endl;
+    //char error[] = "No such file or directory.\n";
+    //write(1, error, sizeof error);
+    exit(EXIT_FAILURE);
+  }
+
+  // read and write
+  //rd = read(fd, buffer, size_of_file);
+  rd = f_read(buffer, size_of_file, 1, fd);
+  if (rd < 0)
+  { // read into buffer
+	cout <, "[cat] Something is wrong!" << endl;
+    //char err[] = "Something is wrong!\n";
+    //write(1, err, sizeof err);
+    exit(EXIT_FAILURE);
+  }
+  buffer[size_of_file + 1] = '\n';
+  //wr = write(file_descriptor_to_be_written, buffer, size_of_file);
+  wr = f_write(buffer, size_of_file, 1, file_descriptor_to_be_written);
+  if (wr < 0)
+  {
+    // write from buffer to the stdout.
+    cout << "[cat]Something goes wrong!" << endl;
+	//char err[] = "Something is wrong!\n";
+    //write(1, err, sizeof err);
+    exit(EXIT_FAILURE);
+  }
+  if (f_close(fd) < 0)
+  {
+    //char error[] = "Can't close the file!";
+    //write(1, error, sizeof error);
+    cout << "[cat] Fail to close the file" << endl;
+	exit(EXIT_FAILURE);
+  }
+}
+
+// syscall verison
+void microcat_using_syscall(const char *file_name, int file_descriptor_to_be_written)
+{
+  int fd, wr, rd;
+  fd = f_open(string(file_name), "r");
+  //(file_name, O_RDONLY);
+
+  int size_of_file = get_file_size(string(file_name));
+  char buffer[size_of_file + 1];
+
+  // error checking and handling
+  if (fd < 0)
+  {
+	cout << "[cat] No such file or directory" << endl;
+    //char error[] = "No such file or directory.\n";
+    //write(1, error, sizeof error);
+    exit(EXIT_FAILURE);
+  }
+
+  // read and write
+  //rd = read(fd, buffer, size_of_file);
+  rd = f_read(buffer, size_of_file, 1, fd);
+  if (rd < 0)
+  { // read into buffer
+	cout <, "[cat] Something is wrong!" << endl;
+    //char err[] = "Something is wrong!\n";
+    //write(1, err, sizeof err);
+    exit(EXIT_FAILURE);
+  }
+  buffer[size_of_file + 1] = '\n';
+  wr = write(file_descriptor_to_be_written, buffer, size_of_file);
+  if (wr < 0)
+  {
+    // write from buffer to the stdout.
+    cout << "[cat]Something goes wrong!" << endl;
+	//char err[] = "Something is wrong!\n";
+    //write(1, err, sizeof err);
+    exit(EXIT_FAILURE);
+  }
+  if (f_close(fd) < 0)
+  {
+    //char error[] = "Can't close the file!";
+    //write(1, error, sizeof error);
+    cout << "[cat] Fail to close the file" << endl;
+	exit(EXIT_FAILURE);
+  }
+}
+
+int microcat_calling(char **args, int argn) {
+	// the case when there is no file input
+	int standard_output = 1;
+	if (argn == 1) {
+		microcat_stdin_using_syscall(standard_output);
+		return SUCCESS;
+	}
+	// read multiple text files
+	for (int i = 1; i < argn; i++)
+	{
+		if (doubleRedirection(args, argn))
+		{
+			if (strncmp(*args[i], ">>") != 0 && i != 1 && i != (argn - 1))
+			{
+				// I assume that the txt file to be written into is to the right of '>'
+				fd = f_open(args[argn - 1], "a");
+				//fd = open(argv[argc - 1], O_RDWR | O_CREAT | O_APPEND, 0666);
+				if (*args[i] == '-')
+					microcat_stdin(fd);
+				else
+					microcat(args[i], fd);
+			} else if (i == 1) {
+				// delete all the content of the txt file that needs to be overwritten.
+				//fd = open(argv[argc - 1], O_RDWR | O_CREAT | O_TRUNC, 0666);
+				fd = f_open(args[argn - 1], "a");
+				microcat(args[i], fd);
+			}
+		}
+		else if (IsRightRedirection(args, argn))
+		{
+			if (*args[i] != '>' && i != 1 && i != (argn - 1))
+			{
+				// I assume that the txt file to be written into is to the right of '>'
+				fd = f_open(args[argn - 1], "a");
+				//fd = open(argv[argc - 1], O_RDWR | O_CREAT | O_APPEND, 0666);
+				if (*args[i] == '-')
+					microcat_stdin(fd);
+				else
+					microcat(args[i], fd);
+			}
+			else if (i == 1)
+			{
+				// delete all the content of the txt file that needs to be overwritten.
+				//fd = open(argv[argc - 1], O_RDWR | O_CREAT | O_TRUNC, 0666);
+				fd = f_open(args[argn - 1], "w");
+				microcat(args[i], fd);
+			}
+		} else if (IsLeftRedirection(args, argn)) {
+			microcat_using_syscall(args[argn - 1], standard_output);
+		} else {
+			// microcat all the text files if there is no redirection symbol.
+			if (*args[i] == '-')
+				microcat_stdin_using_syscall(standard_output);
+			else
+				microcat_using_syscall(args[i], standard_output);
+		}
+	}
+}
+
+// cat command implementation ends here
+
 int check_built_in(Job *job)
 {
 	if (job->processList == NULL)
@@ -531,7 +790,7 @@ int exeBuiltIn(char **args, int argn, sigset_t child_mask)
 	}
 	else if (strcmp(args[0], "cat") == 0)
 	{
-	    return TRUE; // this needs to be changed
+	    return microcat_calling(args, argn);
 	}
 	else if (strcmp(args[0], "more") == 0)
 	{
