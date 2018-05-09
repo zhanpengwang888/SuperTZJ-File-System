@@ -2,8 +2,8 @@
 
 void jobInit()
 {
-	head = malloc(sizeof(Node));
-	tail = malloc(sizeof(Node));
+	head = (Node*)malloc(sizeof(Node));
+	tail = (Node*)malloc(sizeof(Node));
 	head->prev = NULL;
 	head->next = tail;
 	tail->prev = head;
@@ -15,14 +15,14 @@ void jobInit()
 
 Job *createJob(char *line, Process *process, int status, int field)
 {
-	Job *toReturn = malloc(sizeof(Job));
+	Job *toReturn = (Job*) malloc(sizeof(Job));
 	toReturn->status = status;
 	toReturn->jobId = id;
 	toReturn->field = field;
 	id++;
 	if (line != NULL)
 	{
-		toReturn->line = malloc(sizeof(char) * strlen(line) + 1);
+		toReturn->line = (char*)malloc(sizeof(char) * strlen(line) + 1);
 		bzero(toReturn->line, strlen(line) + 1);
 		strcpy(toReturn->line, line);
 	}
@@ -97,7 +97,7 @@ Job *getJLastBackgrounded()
 
 int jobInsert(Job *job)
 {
-	Node *toAdd = malloc(sizeof(Node));
+	Node *toAdd = (Node*)malloc(sizeof(Node));
 	if (!toAdd)
 	{
 		return FALSE;

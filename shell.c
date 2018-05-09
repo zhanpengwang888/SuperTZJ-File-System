@@ -30,9 +30,6 @@ char *line;				  // the whole command line
 char *jobLine;			  // things we will store in job struct
 sigset_t child_mask;
 
-char* usr_name;
-char* sp_user_name;
-
 void sigchld_handler(int sig, siginfo_t *sif, void *notused)
 {
 	// first get the process id of the child process and get the pgid of the child process

@@ -30,12 +30,12 @@ typedef struct LinkedList
     struct LinkedList *prev;
 } Node;
 
-Node *head;
-Node *tail;
-int size;
-int id;
-int last_suspended;    // keep track of the last suspended job
-int last_backgrounded; // keep track of the last backgrounded job
+extern Node *head;
+extern Node *tail;
+extern int size;
+extern int id;
+extern int last_suspended;    // keep track of the last suspended job
+extern int last_backgrounded; // keep track of the last backgrounded job
 
 int jobRemovePid(pid_t pid);    // remove job by pid
 int jobRemoveJobId(int job_id); // remove job by job id

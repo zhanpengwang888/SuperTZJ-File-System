@@ -3,7 +3,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <cstring>
+#include <string.h>
 #include <errno.h>
 //added Sat 12pm -- flag problem
 #include <unistd.h>
@@ -14,6 +14,7 @@
 #include <string>
 #include <vector>
 #include <sstream>
+#include <cstring>
 
 //for function return value
 #define FAIL -1

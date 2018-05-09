@@ -3,7 +3,16 @@
 //need to implement joblock() and jobunlock() to protect joblist
 //void jobunlock();
 //void joblock();
-
+int myShTerminal;
+pid_t myShPGid;
+struct termios myShTmodes;
+pid_t check_stat_pid;
+Node *head;
+Node *tail;
+int size;
+int id;
+int last_suspended;    // keep track of the last suspended job
+int last_backgrounded; // keep track of the last backgrounded job
 // built-in command: jobs
 void bJobs()
 {

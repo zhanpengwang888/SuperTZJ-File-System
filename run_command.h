@@ -6,6 +6,7 @@
 #include <termios.h>
 #include "ll.h"
 #include "util.h"
+#include "fs.h"
 
 void bKill(char** args, int argn);
 void bFg(char** args, int argn, sigset_t child_mask);

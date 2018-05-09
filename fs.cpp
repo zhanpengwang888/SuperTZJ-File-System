@@ -421,7 +421,7 @@ int f_seek(int fd, long int offset, char* whence) {
 		return EXIT_FAILURE;
 	}
 	int inode_idx = cur_file->inode_entry;
-	print_inode(disk_inode_region[inode_idx],inode_idx,1);
+	//print_inode(disk_inode_region[inode_idx],inode_idx,1);
 	if (inode_idx > num_of_total_inode) {
 		// the file doesn't exist
 		return EXIT_FAILURE;
