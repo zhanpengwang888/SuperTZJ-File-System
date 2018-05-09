@@ -2104,7 +2104,7 @@ size_t f_read(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 	int inode_index = target_file->inode_entry;
 	inode* file_inode = disk_inode_region[inode_index];
 	int data_offset = sb->data_offset;
-	int tmp = byte_offset;
+	int tmp = BLOCK_SIZE - byte_offset;
 	size_t data_region_starting_addr = BOOT_SIZE + SUPER_SIZE + data_offset * BLOCK_SIZE;
 	int i = 0; // keep track of where to append the buffer.
 	void* tmp_ptr = restrict_ptr;
@@ -2139,6 +2139,7 @@ size_t f_read(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 			block_offset ++; // increment the block offset by 1
 			block_index = get_index_by_offset(file_inode, block_offset); // use the func to get the next block index.
 			remaining_size -= bytes_read; // reduce the remaining size by the amount of bytes that has been read.
+			continue;
 		} else {
 			// if 0 < remaining_size <= 512, i.e. it is a last block, we need to set the block index, block offset,
 			// and byte offset of the target_file, and update the open file table.
