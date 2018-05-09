@@ -2373,7 +2373,7 @@ size_t f_write(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 			starting_size += BLOCK_SIZE;
 			std::free(i2block_buffer);
 		}
-		else if (data_block_index < N_DBLOCKS + NUM_INODE_IN_BLOCK * N_IBLOCKS + NUM_INODE_IN_BLOCK * NUM_INODE_IN_BLOCK) {
+		else if (data_block_index < N_DBLOCKS + NUM_INODE_IN_BLOCK * N_IBLOCKS + NUM_INODE_IN_BLOCK * NUM_INODE_IN_BLOCK + NUM_INODE_IN_BLOCK * NUM_INODE_IN_BLOCK * NUM_INODE_IN_BLOCK) {
 			data_block_index = data_block_index - N_DBLOCKS - NUM_INODE_IN_BLOCK * N_IBLOCKS - NUM_INODE_IN_BLOCK * NUM_INODE_IN_BLOCK;
 			int new_data_block;
 			new_data_block = sb->free_block;
