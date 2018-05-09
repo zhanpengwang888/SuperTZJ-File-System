@@ -161,8 +161,11 @@ int login() {
 	strcpy(home_dir, "/");
 	strcat(home_dir,name);
 	printf("home dir will be %s\n",home_dir);
-	int status = f_mkdir(string(home_dir),7);
-	//initalize cur_path and global_path
+	//if the directory does not exist, create one
+	if(f_opendir(home_dir) == -1) {
+		int status = f_mkdir(string(home_dir),7);
+		//initalize cur_path and global_path
+	}
 	curr_path = (char*)malloc(MAXLEN);
 	strcpy(curr_path,home_dir);
 	return SUCCESS;
