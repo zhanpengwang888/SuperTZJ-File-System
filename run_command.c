@@ -496,6 +496,15 @@ void bBg(char **args, int argn)
 
 // cat built-in command implementation starts here
 // Not Tested yet. Potential buggy.
+
+string conversion(char **arg, int size) {
+	string temp = "";
+	for (int i = 1; i < size; i++) {
+		temp += *arg[i];
+	}
+	return temp;
+}
+
 // get the keyboard input from stdin and write it into a file.
 void microcat_stdin(int file_descriptor_to_be_written)
 {
@@ -573,24 +582,16 @@ int IsLeftRedirection(char **arg, int size)
 		return FALSE;
 	string command = string(conversion(arg, size));
 	vector<string> command_string_list = split(command, '<'); // split it by '>'
-	if (command_string_list > 1)
+	if (command_string_list.size() > 1)
 		return TRUE;
 	return FALSE;
-}
-
-string conversion(char **arg, int size) {
-	string temp = "";
-	for (int i = 1; i < size; i++) {
-		temp += *arg[i];
-	}
-	return temp;
 }
 
 // check if the command is double redirection
 int doubleRedirection(char **arg, int size) {
 	string command = string(conversion(arg, size));
 	vector<string> command_string_list = split(command, '>>'); // split it by ">>"
-	if (command_string_list > 1)
+	if (command_string_list.size() > 1)
 		return TRUE;
 	return FALSE;
 }
@@ -619,7 +620,7 @@ void microcat(const char *file_name, int file_descriptor_to_be_written)
   rd = f_read(buffer, size_of_file, 1, fd);
   if (rd < 0)
   { // read into buffer
-	cout <, "[cat] Something is wrong!" << endl;
+	cout << "[cat] Something is wrong!" << endl;
     //char err[] = "Something is wrong!\n";
     //write(1, err, sizeof err);
     exit(EXIT_FAILURE);
@@ -668,7 +669,7 @@ void microcat_using_syscall(const char *file_name, int file_descriptor_to_be_wri
   rd = f_read(buffer, size_of_file, 1, fd);
   if (rd < 0)
   { // read into buffer
-	cout <, "[cat] Something is wrong!" << endl;
+	cout << "[cat] Something is wrong!" << endl;
     //char err[] = "Something is wrong!\n";
     //write(1, err, sizeof err);
     exit(EXIT_FAILURE);
@@ -695,6 +696,7 @@ void microcat_using_syscall(const char *file_name, int file_descriptor_to_be_wri
 int microcat_calling(char **args, int argn) {
 	// the case when there is no file input
 	int standard_output = 1;
+	int fd;
 	if (argn == 1) {
 		microcat_stdin_using_syscall(standard_output);
 		return SUCCESS;
@@ -704,7 +706,7 @@ int microcat_calling(char **args, int argn) {
 	{
 		if (doubleRedirection(args, argn))
 		{
-			if (strncmp(*args[i], ">>") != 0 && i != 1 && i != (argn - 1))
+			if (strncmp(args[i], ">>", sizeof(">>")) != 0 && i != 1 && i != (argn - 1))
 			{
 				// I assume that the txt file to be written into is to the right of '>'
 				fd = f_open(args[argn - 1], "a");

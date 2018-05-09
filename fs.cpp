@@ -21,7 +21,6 @@ void clean_block(int index);
 int get_index(int indirect_idx, int offset);
 int get_index_by_offset(inode* f_node, int offset);
 void clean_file(inode* f_node);
-vector<string> split(const string &s, char delim);
 int add_to_file_table(int inode_num, inode *f_node,int mode);
 int traverse_dir(int dirinode_index, string filename, bool isLast);
 int get_next_free_block(int block_index);
