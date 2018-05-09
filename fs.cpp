@@ -2906,6 +2906,79 @@ int create_file(const string filename, int parent_inode, int type, int mode)
 }
 
 
+int change_mode(int mode, string path) {
+	int fd;
+	int inode_index;
+	inode* this_inode;
+	fd = f_open(path);
+	if (mode > 7 || mode < 0) {
+		return FAIL;
+	}
+	if (fd == FAIL) {
+		fd = f_opendir(path);
+		if (fd == FAIL) {
+			return FAIL;
+		}
+		else {
+			inode_index = open_file_table[fd]->inode_entry;
+			this_inode = disk_inode_region[inode_index];
+			this_inode->permission = mode;
+			lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->inode_offset * BLOCK_SIZE + inode_index * sizeof(inode), SEEK_SET);
+			write(disk, this_inode, sizeof(inode));
+			return SUCCESS;
+		}
+	}
+	else {
+		inode_index = open_file_table[fd]->inode_entry;
+		this_inode = disk_inode_region[inode_index];
+		this_inode->permission = mode;
+		lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->inode_offset * BLOCK_SIZE + inode_index * sizeof(inode), SEEK_SET);
+		write(disk, this_inode, sizeof(inode));
+		return SUCCESS;
+	}
+}
+
+
+char* pwd(string file_path) {
+	int fd;
+	char* to_return = malloc(256);
+	char* transfer_buffer = malloc(256);
+	bzero(to_return, 256);
+	bzero(transfer_buffer, 256);
+	int inode_index;
+	file_node* curr_file;
+	inode* curr_inode;
+	fd = f_open(file_path);
+	if (fd == FAIL) {
+		fd = f_opendir(file_path);
+	}
+	if (fd == FAIL) {
+		retun NULL;
+	}
+	else {
+		curr_file = open_file_table[fd];
+		inode_index = curr_file->inode_entry;
+		while(inode_index != 0) {
+			curr_inode = disk_inode_region[inode_index];
+			bzero(transfer_buffer, 256);
+			strcpy(transfer_buffer, to_return);
+			bzero(to_return, 256);
+			strcpy(to_return, curr_inode->file_name);
+			strcat(to_return, "/");
+			strcat(to_return, transfer_buffer);
+			inode_index = curr_inode->parent;
+		}
+		bzero(transfer_buffer, 256);
+		strcpy(transfer_buffer, to_return);
+		bzero(to_return, 256);
+		strcat(to_return, "/");
+		strcat(to_return, transfer_buffer);
+		free(transfer_buffer);
+		return to_return;
+	}
+}
+
+
 int get_next_free_block(int block_index) {
 	void* data_buffer = malloc(BLOCK_SIZE);
 	lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + block_index * BLOCK_SIZE, SEEK_SET);

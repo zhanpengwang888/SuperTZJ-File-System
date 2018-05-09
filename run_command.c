@@ -440,6 +440,98 @@ void bFg(char **args, int argn, sigset_t child_mask)
 // 	}
 // }
 
+
+int fs_cd(char **args, int argn) {
+	if (argn != 2) {
+		return FAIL;
+	}
+	else if (strcmp(args[0], "cd") != 0) {
+		return FAIL;
+	}
+	int fd = -1;
+	char *tocheck = (char *) malloc(strlen(args[1]) + strlen(curr_path) + 1);
+	bzero(tocheck, strlen(args[1]) + strlen(curr_path) + 1);
+	// check whether is an absolute path
+	if (args[1][0] != '/') {
+		free(tocheck);
+		tocheck = NULL;
+		fd = f_opendir(str(args[1]));
+		if (fd < 0) {
+			return FAIL;
+		}
+		else {
+			f_closedir(fd);
+			bzero(curr_path, MAX_LEN);
+			strcpy(curr_path, args[1]);
+			return SUCCESS;
+		}
+	}
+	else {
+		strcpy(tocheck, curr_path);
+		strcat(tocheck, args[1]);
+		fd = f_opendir(str(args[1]));
+		if (fd < 0) {
+			free(tocheck);
+			return FAIL;
+		}
+		else {
+			f_closedir(fd);
+			bzero(curr_path, MAX_LEN);
+			strcpy(curr_path, tocheck);
+			free(tocheck);
+			return FAIL;
+		}
+	}
+}
+
+void fs_pwd() {
+	char* temp = malloc(256);
+	strcpy(temp, curr_path);
+	free(curr_path);
+	curr_path = pwd(str(curr_path));
+	free(temp);
+	printf("%s\n", curr_path);
+}
+
+void fs_chmod(char **args, int argn) {
+	if (argn != 3) {
+		return FAIL;
+	}
+	else if (atoi(args[1]) == 0 && strcmp(args[1], "0") != 0) {
+		return FAIL;
+	}
+	else if (strcmp(args[0], "chmod") != 0) {
+		return FAIL;
+	}
+	change_mode(atoi(args[1]), args[2]);
+}
+
+
+int fs_mkdir(char** args, int argn) {
+	if (argn != 3) {
+		return FAIL;
+	}
+	else if (atoi(args[1]) == 0 && strcmp(args[1], "0") != 0) {
+		return FAIL;
+	}
+	else {
+		return f_mkdir(args[2], atoi(args[1]));
+	}
+}
+
+int fs_rmdir(char** args, int argn) {
+	if (argn != 2) {
+		return FAIL;
+	}
+	else {
+		return f_rmdir(args[1]);
+	}
+}
+
+
+
+
+
 // could be "bg %        number" or "bg %number"
 void bBg(char **args, int argn)
 {
