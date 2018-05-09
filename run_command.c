@@ -7,13 +7,14 @@
 int last_backgrounded; // keep track of the last backgrounded job
 // built-in command: jobs
 char* get_cur_file_path(char* cur_dir, char* cur_filename) {
-	char* cur_file_path = (char*)malloc(256);
-	strcpy(cur_file_path,cur_dir);
-	strcat(cur_file_path,"/");
-	strcat(cur_file_path,cur_filename);
-	printf("cur_file is now %s\n",cur_file_path);
-	return cur_file_path;
+        char* cur_file_path = (char*)malloc(256);
+        strcpy(cur_file_path,cur_dir);
+        strcat(cur_file_path,"/");
+        strcat(cur_file_path,cur_filename);
+        printf("cur_file is now %s\n",cur_file_path);
+        return cur_file_path;
 }
+
 //ls need to know the current directory path
 //readdir will return NULL if it is the end of directory
 void ls(int mode) {
@@ -31,19 +32,20 @@ void ls(int mode) {
 		cur_entry = f_readdir(cur_dir);
 		if(cur_entry == NULL) {
 			//let the directory go back to the beginning
-			//f_seek(cur_dir,0,"SEEK_SET");
-			f_closedir(cur_dir);
-			return;
+		  //f_seek(cur_dir,0,"SEEK_SET");
+		  f_closedir(cur_dir);
+		  return;
 		}
 		if(strcmp(cur_entry->file_name,".")== 0 || strcmp(cur_entry->file_name,"..") == 0) {
-			continue;
+		  printf("%s\n",cur_entry->file_name);
+		  continue;
 		}
 		if(mode == 1) {
 			char* cur_file = get_cur_file_path(curr_path,cur_entry->file_name);
-			cur_fd = f_open(string(cur_file));
+			cur_fd = f_open(string(cur_file),"r");
 			if(f_stat(cur_fd,f_status) < 0) {
 				printf("there are some problems reading this file\n");
-				continue;
+					continue;
 			}
 			if(f_status->type == DIRECTORY_FILE)
 				printf("%s%s\t",cur_entry->file_name,"/");
@@ -54,8 +56,8 @@ void ls(int mode) {
 			free(cur_file);
 		}
 		else if(mode == 2) {
-			char* cur_file = get_cur_file_path(curr_path,cur_entry->file_name);
-			cur_fd = f_open(string(cur_file));
+		  char* cur_file = get_cur_file_path(curr_path,cur_entry->file_name);
+			cur_fd = f_open(string(cur_file),"r");
 			if(f_stat(cur_fd,f_status) < 0) {
 				printf("there are some problems reading this file\n");
 				continue;
@@ -81,7 +83,7 @@ void ls(int mode) {
 					strcpy(p_char,"xrw");
 					break;	
 			}
-			printf("%s   %d   %d    %ld    %s\n",p_char,f_status->uid,f_status->gid,f_status->size, cur_entry->file_name);
+			printf("%s   %d   %d    %ld    %s\n",p_char,f_status->uid,f_status->gid,f_status->filesize, cur_entry->file_name);
 			free(cur_file);
 			free(p_char);
 		}
@@ -90,8 +92,9 @@ void ls(int mode) {
 		else
 			printf("%s\t",cur_entry->file_name);
 	}
-
+	f_close(cur_dir);
 }
+
 void bJobs()
 {
 	printList();
