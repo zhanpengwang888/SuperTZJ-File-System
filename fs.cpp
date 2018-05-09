@@ -1187,7 +1187,7 @@ int f_rmdir(string filepath) {
 			// check if it is a directory or a file.
 			char *name = entry->file_name;
 			int inode_index_of_file = entry->inode_entry;
-			if (string(name) != "." && string(name) != "..") {
+			if (string(name) != "." && string(name) != ".." && inode_index_of_file != -1) {
 				if (disk_inode_region[inode_index_of_file]->type == DIRECTORY_FILE) {
 					string directory_path_string = filepath + "/" + string(name);
 					f_rmdir(directory_path_string);
@@ -1235,12 +1235,14 @@ int f_rmdir(string filepath) {
 				// check if it is a directory or a file.
 				char *name = entry->file_name;
 				int inode_index_of_file = entry->inode_entry;
-				if (disk_inode_region[inode_index_of_file]->type == DIRECTORY_FILE) {
-					string directory_path_string = filepath + "/" + string(name);
-					f_rmdir(directory_path_string);
-				} else {
-					string file_path_string = filepath + "/" + string(name);
-					f_remove(file_path_string);
+				if (inode_index_of_file != -1) {
+					if (disk_inode_region[inode_index_of_file]->type == DIRECTORY_FILE) {
+						string directory_path_string = filepath + "/" + string(name);
+						f_rmdir(directory_path_string);
+					} else {
+						string file_path_string = filepath + "/" + string(name);
+						f_remove(file_path_string);
+					}
 				}
 				remaining_size -= sizeof(directory_entry); // reducing the remaining size by 32 bytes.
 				if (remaining_size <= sizeof(directory_entry) * 2) {
@@ -1286,12 +1288,14 @@ int f_rmdir(string filepath) {
 				// check if it is a directory or a file.
 				char *name = entry->file_name;
 				int inode_index_of_file = entry->inode_entry;
-				if (disk_inode_region[inode_index_of_file]->type == DIRECTORY_FILE) {
-					string directory_path_string = filepath + "/" + string(name);
-					f_rmdir(directory_path_string);
-				} else {
-					string file_path_string = filepath + "/" + string(name);
-					f_remove(file_path_string);
+				if (inode_index_of_file != -1) {
+					if (disk_inode_region[inode_index_of_file]->type == DIRECTORY_FILE) {
+						string directory_path_string = filepath + "/" + string(name);
+						f_rmdir(directory_path_string);
+					} else {
+						string file_path_string = filepath + "/" + string(name);
+						f_remove(file_path_string);
+					}
 				}
 				remaining_size -= sizeof(directory_entry); // reducing the remaining size by 32 bytes.
 				if (remaining_size <= sizeof(directory_entry) * 2) {
@@ -1348,12 +1352,14 @@ int f_rmdir(string filepath) {
 					// check if it is a directory or a file.
 					char *name = entry->file_name;
 					int inode_index_of_file = entry->inode_entry;
-					if (disk_inode_region[inode_index_of_file]->type == DIRECTORY_FILE) {
-						string directory_path_string = filepath + "/" + string(name);
-						f_rmdir(directory_path_string);
-					} else {
-						string file_path_string = filepath + "/" + string(name);
-						f_remove(file_path_string);
+					if (inode_index_of_file != -1) {
+						if (disk_inode_region[inode_index_of_file]->type == DIRECTORY_FILE) {
+							string directory_path_string = filepath + "/" + string(name);
+							f_rmdir(directory_path_string);
+						} else {
+							string file_path_string = filepath + "/" + string(name);
+							f_remove(file_path_string);
+						}
 					}
 					remaining_size -= sizeof(directory_entry); // reducing the remaining size by 32 bytes.
 					if (remaining_size <= sizeof(directory_entry) * 2) {
