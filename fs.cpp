@@ -1040,7 +1040,7 @@ directory_entry *f_readdir(int dirfd) {
 // f_closedir just needs to call f_close because we treat the directory as a file.
 // if f_close works, f_closedir should also works.
 int f_closedir(int dirfd) {
-	open_directory_tracker[dirfd] = 0；
+	open_directory_tracker[dirfd] = 0;
 	return f_close(dirfd);
 }
 
