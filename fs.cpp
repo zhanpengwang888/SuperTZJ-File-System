@@ -85,6 +85,7 @@ int f_mount(char* destination, char* diskname) {
 		open_file_table[i]->block_offset = 0;
 		open_file_table[i]->byte_offset = 0;
 	}
+	return SUCCESS;
 }
 
 
@@ -1927,8 +1928,8 @@ int f_remove(const string path) {
 	}
 	//test printing before clean
 	printf("This is f_remove test printing!########################\n");
-	print_superblock(sb);
-	print_inode(target,dir_node,1);
+	//print_superblock(sb);
+	//print_inode(target,dir_node,1);
 	
 	//superblock not be updated when create file
 	if(target->size > 0){
@@ -1938,8 +1939,8 @@ int f_remove(const string path) {
 	update_sb();
 
 	//test printing
-	print_superblock(sb);
-	print_inode(target,dir_node,1);
+	//print_superblock(sb);
+	//print_inode(target,dir_node,1);
 	printf("next free inode is %d\n",target->next_inode);
 
 	return SUCCESS;

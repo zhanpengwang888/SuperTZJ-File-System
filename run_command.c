@@ -474,9 +474,10 @@ int check_built_in(Job *job)
 	}
 	else if (strcmp(args[0], "mount") == 0)
 	{
+	    printf("we get in mount! ya!\n");
 	    return TRUE; // this needs to be changed
 	}
-	else if (strcmp(args[0], "mount") == 0)
+	else if (strcmp(args[0], "umount") == 0)
 	{
 	    return TRUE; // this needs to be changed
 	}
@@ -541,9 +542,10 @@ int exeBuiltIn(char **args, int argn, sigset_t child_mask)
 	}
 	else if (strcmp(args[0], "mount") == 0)
 	{
+	    
 	    return TRUE; // this needs to be changed
 	}
-	else if (strcmp(args[0], "mount") == 0)
+	else if (strcmp(args[0], "umount") == 0)
 	{
 	    return TRUE; // this needs to be changed
 	}

@@ -11,6 +11,7 @@ structure inspired by: https://github.com/jmreyes/simple-c-shell/blob/master/sim
 #include "parser.h"
 #include "run_command.h"
 #include "ll.h"
+#include "fs.h"
 
 #define MAXLEN 256
 #define MAXLINE 1024
@@ -28,6 +29,9 @@ char **command;			  // command line that has been separated by ";"
 char *line;				  // the whole command line
 char *jobLine;			  // things we will store in job struct
 sigset_t child_mask;
+
+char* usr_name;
+char* sp_user_name;
 
 void sigchld_handler(int sig, siginfo_t *sif, void *notused)
 {
@@ -110,18 +114,52 @@ void initShell()
 		perror("not a tty device");
 	else
 	{
-		if (tcgetattr(myShTerminal, &myShTmodes) != 0)
+		if (tcgetattr(myShTerminal, &myShTmodes) != 0){
 			perror("tcgetattr error");
+			return;
+		}
 		if ((myShPGid = tcgetpgrp(myShTerminal)) < 0)
 		{
 			perror("tcgetpgrp() failed");
+			return;
 		}
 	}
+	//ready for file system set up
+	strcpy(usr_name,"usr_default");
+	strcpy(sp_user_name,"sp_default");
+
+	//check whether the disk exists
+	if( access( "DISK", F_OK ) != -1 ) {
+	    // file exists
+	    if(f_mount("/","DISK") < 0) {
+	    	printf("mount disk fail\n");
+	    	return;
+	    }
+	} else {
+	    //we need to ask user to format one, but here we just create a dafult size disk
+	   //format_default_size("DISK");
+		if(access("format_disk", F_OK) != -1) {
+			int status = system("./format_disk DISK");
+		   	if(f_mount("/","DISK") < 0) {
+		    	printf("mount disk fail\n");
+		    	return;
+		    }
+		}
+		else {
+			system("make format");
+			system("./format_disk DISK");
+			if(f_mount("/","DISK") < 0) {
+		    	printf("mount disk fail\n");
+		    	return;
+		    }
+		}
+	}
+
 }
 
 int main(int argc, char **argv)
 {
-	jobInit();
+	//jobInit();
 	initShell();
 	int built_in_flag = FALSE;
 	check_stat_pid = -10;
