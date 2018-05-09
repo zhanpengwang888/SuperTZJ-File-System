@@ -1,5 +1,5 @@
 #include "run_command.h"
-
+#define MAX_LEN 256
 //need to implement joblock() and jobunlock() to protect joblist
 //void jobunlock();
 //void joblock();
@@ -458,7 +458,7 @@ int fs_cd(char **args, int argn) {
 	if (args[1][0] != '/') {
 		free(tocheck);
 		tocheck = NULL;
-		fd = f_opendir(str(args[1]));
+		fd = f_opendir(string(args[1]));
 		if (fd < 0) {
 			return FAIL;
 		}
@@ -488,7 +488,7 @@ int fs_cd(char **args, int argn) {
 }
 
 void fs_pwd() {
-	char* temp = malloc(256);
+	char* temp = (char*)malloc(256);
 	strcpy(temp, curr_path);
 	free(curr_path);
 	curr_path = pwd(string(curr_path));
