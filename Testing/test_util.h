@@ -28,4 +28,5 @@ void create_test_file(char* name);
 void create_node(inode* test_inode, int index, int size, string name);
 void create_mid_file(char* name);
 void create_large_file(char* name);
+void print_free_blocks(char* buffer, Superblock* sp);
 #endif

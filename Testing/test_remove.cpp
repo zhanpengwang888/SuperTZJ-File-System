@@ -19,7 +19,7 @@ int main() {
 	format_default_size("test");
 
 	//for testing small file
-	create_test_file("test");
+	//create_test_file("test");
 
 	//for testing mid size file
 	//create_mid_file("test");
@@ -27,7 +27,7 @@ int main() {
 	//assume mount to root directory
 	f_mount("/","test");
 
-	
+	/*
 	//test f_remove small file
 	printf("Testing program printing !!! $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n");
 	int test_fd = f_open("/test.txt","r");
@@ -55,10 +55,10 @@ int main() {
 	fseek(fp,0,SEEK_SET);
 	fread(file_buffer, size , 1,fp);
 	print_inode_region(sp,file_buffer);
-	
+	*/
 
 	//test f_remove middle size file
-	/*
+	
 	int test_fd = f_open("/test.txt","r");
 	f_close(test_fd);
 	f_remove("/test.txt");
@@ -82,7 +82,7 @@ int main() {
     inode* root = inode_head;
     //also need to print root directory
     print_directory(sp,root,file_buffer);
-    */
+    
 
 
 	return 0;

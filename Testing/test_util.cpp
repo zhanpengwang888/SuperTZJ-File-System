@@ -62,6 +62,24 @@ void create_node(inode* test_inode, int index, int size, string name){
  std::strcpy(test_inode->file_name, name.c_str());
 
 }
+void print_free_blocks(char* buffer, Superblock* sp) {
+  //we will print the first 20 free blocks
+  size_t data_address = BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE;
+  int f_block_index = sp->free_block;
+  for(int i = 0; i < 20; i ++) {
+    //if it is a reasonable index, we print it out
+    if(f_block_index > 0 && f_block_index < 10000) {
+      size_t f_block_address = data_address + data_address + f_block_index * BLOCK_SIZE;
+      int* f_block = (int*)(buffer + f_block_address);
+      printf("free block %d, next free block is %d\n",f_block_index,f_block[0]);
+      f_block_index = f_block[0];
+    }
+    else {
+      printf("The index is weird, it is %d\n",f_block_index);
+      return;
+    }
+  }
+}
 
 void create_mid_file(char* name) {
  fp = fopen(name,"r+");

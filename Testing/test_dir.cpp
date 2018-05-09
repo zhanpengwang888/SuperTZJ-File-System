@@ -16,9 +16,8 @@ const char* junk_c = junk.c_str();
 
 int main() {
 	format_default_size("test");
+	//create_test_file("test");
 	f_mount("/", "test");
-	create_test_file("test");
-
 	// Test f_mkdir:
 	int make_a_directory = f_mkdir("/test_dir", RDONLY + EXEONLY + WRONLY);
 	cout << "[f_mkdir] The returned value is " << make_a_directory << endl;
@@ -30,6 +29,9 @@ int main() {
 	file_buffer = (char*) malloc(size);
 	fread(file_buffer, size ,1,fp);
   	sp = (Superblock*)(file_buffer + BOOT_SIZE);
+  	inode_start = BOOT_SIZE + SUPER_SIZE + sp->inode_offset * BLOCK_SIZE;
+    inode_end = BOOT_SIZE + SUPER_SIZE + sp->data_offset * BLOCK_SIZE;
+    inode_num = (inode_end - inode_start) / INODE_SIZE;
 	print_superblock(sp);
 	inode* inode_head = (inode*)(file_buffer + inode_start);
     inode* root = inode_head;
@@ -37,6 +39,7 @@ int main() {
     print_inode_region(sp,file_buffer);
 	print_directory(sp, root, file_buffer); // print the directory.
 	print_directory(sp,my_dir,file_buffer);
+	print_free_blocks(file_buffer,sp);
 	
 	return 0;
 }
