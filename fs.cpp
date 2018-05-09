@@ -547,7 +547,7 @@ int get_index(int indirect_idx, int offset) {
   //read from the file descriptor
   read(disk,index_buffer,BLOCK_SIZE);
   int* index_table = (int*)(index_buffer); //here we need to read from disk image
-  free(index_buffer);
+  //free(index_buffer);
   return index_table[offset];
 }
 
@@ -574,6 +574,7 @@ int get_index_by_offset(inode* f_node, int offset) {
 	else if(offset > d_limit && offset <= i_limit) {
 		int i_elem = index - d_limit; //know the exact position in indirect block list
 		b_index = get_index(f_node->iblocks[i_elem/entry_num],i_elem%entry_num);
+		printf("I am in get index by offset, and the iblock index is %d, with a offset of %d\n", f_node->iblocks[i_elem/entry_num], i_elem%entry_num);
 		return b_index;
 	}
 	else if(offset > i_limit && offset <= i2_limit) {
@@ -2117,6 +2118,7 @@ size_t f_read(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 			perror("[lseek in f_read] Fails");
 			return FAIL;
 		}
+		printf("We're reading block %d in f_Read------------------------------\n", block_index);
 		if (byte_offset != 0) {
 			//printf("the byte offset is not 0\n");
 			int bytes_read = BLOCK_SIZE - byte_offset;
@@ -2131,7 +2133,7 @@ size_t f_read(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 			if (0 < remaining_size && remaining_size <= BLOCK_SIZE) {
 				tmp_ptr  = (void*)((char*)restrict_ptr + tmp + BLOCK_SIZE * i);
 				int test = read(disk, tmp_ptr, remaining_size);
-				printf("the test tmp_ptr now is %s and %d\n",(char*)tmp_ptr,test);
+				printf("the test tmp_ptr now is %s and %d, with a block index of %d\n",(char*)tmp_ptr,test, block_index);
 				//printf("the test tmp_ptr now is %s and %d\n",(char*)tmp_ptr,test);
 				if (remaining_size == BLOCK_SIZE) {
 					byte_offset = 0;
@@ -2154,7 +2156,7 @@ size_t f_read(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 			} else {
 				tmp_ptr  = (void*)((char*)restrict_ptr + tmp + BLOCK_SIZE * i);
 				int test = read(disk, tmp_ptr, BLOCK_SIZE);
-				printf("the test tmp_ptr now is %s and %d\n",(char*)tmp_ptr,test);
+				printf("the test tmp_ptr now is %s and %d, with a block index of %d\n",(char*)tmp_ptr,test, block_index);
 				byte_offset = 0; // reset the byte offset
 				block_offset ++; // increment the block offset by 1
 				block_index = get_index_by_offset(file_inode, block_offset); // use the func to get the next block index.
@@ -2256,6 +2258,8 @@ size_t f_write(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 				sb->free_block = get_next_free_block(sb->free_block);
 				//i1block_index++; // we are now at the new i1block
 				inode_of_file->iblocks[i1block_index] = new_data_block_for_i1;
+				lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->inode_offset * BLOCK_SIZE + target_file->inode_entry * sizeof(inode), SEEK_SET);
+				write(disk, inode_of_file, sizeof(inode));
 				// write new_Data_block to the new i1block
 				void *i1block_buffer = malloc(BLOCK_SIZE);
 				lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + inode_of_file->iblocks[i1block_index] * BLOCK_SIZE, SEEK_SET);
@@ -2264,10 +2268,11 @@ size_t f_write(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 				inode_i1bloc = (int *)(i1block_buffer);
 				inode_i1bloc[0] = new_data_block;
 				// set the file indicator back to where it was, shit
+				printf("new_data_block is %d, i1block_addr is %d, i1block_index is %d, i1bloc_offset is %d\n\n", inode_i1bloc[0], inode_of_file->iblocks[i1block_index], i1block_index, i1block_offset);
 				lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + inode_of_file->iblocks[i1block_index] * BLOCK_SIZE, SEEK_SET);
 				write(disk, i1block_buffer, BLOCK_SIZE);
 				std::free(i1block_buffer);
-				printf("new_data_block is %d, i1block_offset is %d\n\n", new_data_block, i1block_offset);
+				
 			}
 			else {
 				void *i1block_buffer = malloc(BLOCK_SIZE);
@@ -2276,8 +2281,8 @@ size_t f_write(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 				int *inode_i1bloc = NULL;
 				inode_i1bloc = (int *)(i1block_buffer);
 				inode_i1bloc[i1block_offset] = new_data_block;
-				printf("new_data_block is %d, i1block_offset is %d\n\n", new_data_block, i1block_offset);
-				lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + i1block_index * BLOCK_SIZE, SEEK_SET);
+				printf("new_data_block is %d, i1block_addr is %d, i1block_index is %d, i1bloc_offset is %d\n\n", new_data_block, inode_of_file->iblocks[i1block_index], i1block_index, i1block_offset);
+				lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + inode_of_file->iblocks[i1block_index] * BLOCK_SIZE, SEEK_SET);
 				write(disk, i1block_buffer, BLOCK_SIZE);
 				std::free(i1block_buffer);
 
@@ -2331,6 +2336,8 @@ size_t f_write(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 				write(disk, i1block_buffer, BLOCK_SIZE);
 				std::free(i1block_buffer);				
 			}
+			lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->inode_offset * BLOCK_SIZE + target_file->inode_entry * sizeof(inode), SEEK_SET);
+			write(disk, inode_of_file, sizeof(inode));
 			block_to_write = new_data_block;
 			lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + block_to_write * BLOCK_SIZE, SEEK_SET);
 			transfer_buffer = (void*) ((char*) rounded_buffer + i * BLOCK_SIZE);
@@ -2422,6 +2429,8 @@ size_t f_write(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 				lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + i1block_index * BLOCK_SIZE, SEEK_SET);
 				write(disk, i1block_buffer, BLOCK_SIZE);				
 			}
+			lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->inode_offset * BLOCK_SIZE + target_file->inode_entry * sizeof(inode), SEEK_SET);
+			write(disk, inode_of_file, sizeof(inode));			
 			block_to_write = new_data_block;
 			lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + block_to_write * BLOCK_SIZE, SEEK_SET);
 			transfer_buffer = (void*) ((char*) rounded_buffer + i * BLOCK_SIZE);
