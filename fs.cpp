@@ -1033,12 +1033,6 @@ int f_closedir(int dirfd) {
 	return f_close(dirfd);
 }
 
-// f_closedir just needs to call f_close because we treat the directory as a file.
-// if f_close works, f_closedir should also works.
-int f_closedir(int dirfd) {
-	return f_close(dirfd);
-}
-
 // f_mkdir: 
 // if the directory already exists return Fail. Otherwise create a new directory.
 // Not Tested yet. Potential buggy.
