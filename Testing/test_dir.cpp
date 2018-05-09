@@ -98,6 +98,25 @@ int main(int argc, char** argv) {
 	f_close(fd);
 	*/
 
+	// Test open a directory                                                                                                                                                
+        cout << "Testing f_opendir" << endl;
+        int directory_open = f_opendir("/");
+        if (directory_open == FAIL) {
+                cout << "[f_opendir] Fails" << endl;
+                return FAIL;
+        }
+        printf("\n");
+        // Test read a directory                                                                                                                                                
+        cout << "Testing f_readdir" << endl;
+        directory_entry* entry;
+        while ((entry = f_readdir(directory_open)) != NULL) {
+          cout << "Entry: "<< entry->file_name << endl;
+        }
+        printf("\n");
+        // Test close a directory                                                                                                                                               
+        cout << "Testing f_closedir" << endl;
+        directory_open = f_closedir(directory_open);
+	
 	fp = fopen("test","r");
 	fseek(fp, 0, SEEK_END);
   	size_t size = ftell(fp);
