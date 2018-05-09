@@ -27,6 +27,7 @@ int get_next_free_block(int block_index);
 int remove_p_dir_entry(char* file_name,int parent_index);
 int swap_entry(int dirinode_index, string filename);
 directory_entry* deal_last_entry(int dirinode_index,const char* filename);
+vector<string> split(const string &s, char delim);
 
 //testing function
 void print_file_table();
