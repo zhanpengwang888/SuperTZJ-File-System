@@ -1033,6 +1033,12 @@ int f_closedir(int dirfd) {
 	return f_close(dirfd);
 }
 
+// f_closedir just needs to call f_close because we treat the directory as a file.
+// if f_close works, f_closedir should also works.
+int f_closedir(int dirfd) {
+	return f_close(dirfd);
+}
+
 // f_mkdir: 
 // if the directory already exists return Fail. Otherwise create a new directory.
 // Not Tested yet. Potential buggy.
@@ -1056,9 +1062,16 @@ int f_mkdir(string path, int mode) {
 	for (int i = 0; i < path_list.size(); i++){
 		parent_node = dir_node;
 		dir_node = traverse_directory(dir_node, path_list[i]);
-		if (dir_node != FAIL) {
-			cout << "The directory has already existed." << endl;
-			return FAIL;
+		if (i == path_list.size() -1) {
+			if (dir_node != FAIL) {
+				cout << "The directory " << path_list[i] <<  " has already existed." << endl;
+				return FAIL;
+			}
+		} else {
+			if (dir_node == FAIL) {
+				cout << "The directory" << path_list[i] <<  " does not exist." << endl;
+				return FAIL;
+			}
 		}
 	}
 	// if it does not exist, create the new directory.
@@ -1087,7 +1100,7 @@ int f_mkdir(string path, int mode) {
 	lseek(disk, data_address + sb->free_block * BLOCK_SIZE, SEEK_SET);
 	read(disk, free_block_char, BLOCK_SIZE);
 	int *free_block = (int*) free_block_char;
-	//cout << "So the next free block is " << free_block[0] << endl;
+	cout << "So the next free block is " << free_block[0] << "   " << sb->free_block << endl;
 	sb->free_block = free_block[0];
 	
 	// update the superblock and write it back to the disk
@@ -1104,10 +1117,10 @@ int f_mkdir(string path, int mode) {
 	read(disk, dir_buffer, BLOCK_SIZE);
 	directory_entry* entry = (directory_entry*)(dir_buffer);
 	entry[0].inode_entry = inode_index_for_new_dir;
-	strcpy(entry[0].file_name, ".");
+	strncpy(entry[0].file_name, ".", sizeof(entry[0].file_name));
 	updated_directory_size += sizeof(directory_entry);
 	entry[1].inode_entry = parent_node;
-	strcpy(entry[1].file_name, "..");
+	strncpy(entry[1].file_name, "..", sizeof(entry[1].file_name));
 	updated_directory_size += sizeof(directory_entry);
 	// write the first data block
 	lseek(disk, first_data_block_addr,SEEK_SET);
