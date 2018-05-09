@@ -22,7 +22,7 @@ void put_job_in_foreground(Job* job, sigset_t child_mask, int flag_stop);
 void ls(int mode);
 int fs_cd(char **args, int argn);
 void fs_pwd();
-void fs_chmod(char **args, int argn);
+int fs_chmod(char **args, int argn);
 int fs_mkdir(char** args, int argn);
 int fs_rmdir(char** args, int argn);
 #endif
