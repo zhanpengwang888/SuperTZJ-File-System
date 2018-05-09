@@ -19,4 +19,5 @@ int exeBuiltIn(char** args, int argn, sigset_t child_mask);
 int changeDirectory(char** args);
 int check_built_in(Job* job);
 void put_job_in_foreground(Job* job, sigset_t child_mask, int flag_stop);
+void ls(int mode);
 #endif
