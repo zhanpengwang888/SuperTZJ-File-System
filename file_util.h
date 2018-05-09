@@ -36,7 +36,7 @@
 #define INODE_RATE 1/100
 #define N_DBLOCKS 10
 #define N_IBLOCKS 4
-#define NUM_INODE_IN_BLOCK BLOCK_SIZE / sizeof(inode)
+#define NUM_INODE_IN_BLOCK (BLOCK_SIZE / sizeof(int))
 #define EXEONLY 1
 #define WRONLY 2
 #define RDONLY 4
