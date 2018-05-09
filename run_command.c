@@ -32,20 +32,16 @@ void ls(int mode) {
 		cur_entry = f_readdir(cur_dir);
 		if(cur_entry == NULL) {
 			//let the directory go back to the beginning
-		  //f_seek(cur_dir,0,"SEEK_SET");
-		  f_closedir(cur_dir);
-		  return;
-		}
-		if(strcmp(cur_entry->file_name,".")== 0 || strcmp(cur_entry->file_name,"..") == 0) {
-		  printf("%s\n",cur_entry->file_name);
-		  continue;
+			//f_seek(cur_dir,0,"SEEK_SET");
+			f_closedir(cur_dir);
+			return;
 		}
 		if(mode == 1) {
 			char* cur_file = get_cur_file_path(curr_path,cur_entry->file_name);
 			cur_fd = f_open(string(cur_file),"r");
 			if(f_stat(cur_fd,f_status) < 0) {
 				printf("there are some problems reading this file\n");
-					continue;
+				continue;
 			}
 			if(f_status->type == DIRECTORY_FILE)
 				printf("%s%s\t",cur_entry->file_name,"/");
@@ -56,7 +52,10 @@ void ls(int mode) {
 			free(cur_file);
 		}
 		else if(mode == 2) {
-		  char* cur_file = get_cur_file_path(curr_path,cur_entry->file_name);
+			if(strcmp(cur_entry->file_name,".")== 0 || strcmp(cur_entry->file_name,"..") == 0) {
+				continue;
+			}
+			char* cur_file = get_cur_file_path(curr_path,cur_entry->file_name);
 			cur_fd = f_open(string(cur_file),"r");
 			if(f_stat(cur_fd,f_status) < 0) {
 				printf("there are some problems reading this file\n");
@@ -83,16 +82,20 @@ void ls(int mode) {
 					strcpy(p_char,"xrw");
 					break;	
 			}
-			printf("%s   %d   %d    %ld    %s\n",p_char,f_status->uid,f_status->gid,f_status->filesize, cur_entry->file_name);
+			printf("%s   %d   %d    %ld    %s\n",p_char,f_status->uid,f_status->gid,f_status->size, cur_entry->file_name);
 			free(cur_file);
 			free(p_char);
 		}
 
 		//deal with deafult mode
-		else
+		else {
+			if(strcmp(cur_entry->file_name,".")== 0 || strcmp(cur_entry->file_name,"..") == 0) {
+				continue;
+			}
 			printf("%s\t",cur_entry->file_name);
+		}
 	}
-	f_close(cur_dir);
+
 }
 
 void bJobs()
@@ -949,6 +952,16 @@ int exeBuiltIn(char **args, int argn, sigset_t child_mask)
 	// Homework 7 additional built-in commands
 	else if (strcmp(args[0], "ls") == 0)
 	{
+	    if(argn == 1)
+	    	ls(0);
+	    else{
+	    	if(argn == 2 && strcmp(args[1],"-F") == 0)
+	    		ls(1);
+	    	else if(argn == 2 && strcmp(args[1],"-l") == 0)
+	    		ls(2);
+	    	else
+	    		return FALSE;
+	    }
 	    return TRUE; // this needs to be changed
 	}
 	else if (strcmp(args[0], "chmod") == 0)
