@@ -7,27 +7,18 @@
 int last_backgrounded; // keep track of the last backgrounded job
 // built-in command: jobs
 int fs_rm(char* file_name) {
-	//parse the file_name list
-
-	char* f_name = (char*)malloc(MAX_LEN);
-	int result;	
-	//open the file to get is type
-	strcpy(f_name,curr_path);
-	strcat(f_name,"/");
-	strcat(f_name,file_name);
-// 	int test_fd = f_opendir(f_name);
-// 	if(test_fd >= 0) {
-// 		printf("Can remove directory use \"rm\" command, please use rmdir\n");
-// 		return FAIL;
-// 	}
-	result = f_remove(f_name);
-	//f_closedir(test_fd);
-	if(result < 0) {
-		printf("Something wrong with the f_remove\n");
-		return FAIL;
-	}
-	
-	return SUCCESS;
+        //parse the file_name list  
+        if (args[1][0] != '/') {
+			char* tocheck = (char*) malloc(256);
+			strcpy(tocheck, curr_path);
+			strcat(tocheck, "/");
+			strcat(tocheck, args[1]);
+			//check whether the path contains upper directory
+			return f_remove(string(tocheck));
+		}
+		else {
+			return f_rmdir(string(args[1]));
+		}                                                                                                 
 }
 
 char* get_cur_file_path(char* cur_dir, char* cur_filename) {
