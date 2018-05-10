@@ -9,7 +9,7 @@ int last_backgrounded; // keep track of the last backgrounded job
 int fs_rm(char* file_name) {
 	//parse the file_name list
 
-	vector<string> f_list = split(string(file_name)," ");
+	vector<string> f_list = split(string(file_name),' ');
 	char* f_name = (char*)malloc(MAX_LEN);
 	int result;
 	for (int i = 0; i < f_list.size(); i++)
