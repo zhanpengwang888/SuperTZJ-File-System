@@ -37,6 +37,10 @@ void ls(int mode) {
 			return;
 		}
 		if(mode == 1) {
+			if(strcmp(cur_entry->file_name,".")== 0 || strcmp(cur_entry->file_name,"..") == 0) {
+				printf("%s\t",cur_entry->file_name);
+				continue;
+			}
 			char* cur_file = get_cur_file_path(curr_path,cur_entry->file_name);
 			cur_fd = f_open(string(cur_file),"r");
 			if(f_stat(cur_fd,f_status) < 0) {
