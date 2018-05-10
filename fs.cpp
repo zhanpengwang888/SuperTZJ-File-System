@@ -2031,11 +2031,19 @@ int f_open(const string restrict_path, const string restrict_mode)
 	//if not in the file table, add an new element in it
 	int result;
 	if(restrict_mode == "r"){
+		if(target->permission != 7 && target->permission != 4 && target->permission != 5 && target->permission != 6) {
+			printf("Permission Denied!!!!\n");
+			return EXIT_FALIURE;
+		}
 		//printf("come in read mode\n");
 		result = add_to_file_table(dir_node, target,RDONLY);
 	}
 	else{
 		//printf("come in write mode\n");
+		if(target->permission != 7 && target->permission != 2 && target->permission != 3 && target->permission != 6) {
+			printf("Permission Denied!!!!\n");
+			return EXIT_FALIURE;
+		}
 		result = add_to_file_table(dir_node, target,WRONLY);
 	}
 	//print_file_table();
