@@ -507,7 +507,7 @@ int fs_cd(char **args, int argn) {
 	char *tocheck = (char *) malloc(strlen(args[1]) + strlen(curr_path) + 1);
 	bzero(tocheck, strlen(args[1]) + strlen(curr_path) + 1);
 	// check whether is an absolute path
-	if (args[1][0] != '/') {
+	if (args[1][0] == '/') {
 		free(tocheck);
 		tocheck = NULL;
 		fd = f_opendir(string(args[1]));
@@ -531,7 +531,7 @@ int fs_cd(char **args, int argn) {
 		}
 		else {
 			f_closedir(fd);
-			bzero(curr_path, MAX_LEN);
+			bzero(curr_path, 256);
 			strcpy(curr_path, tocheck);
 			free(tocheck);
 			return FAIL;
@@ -543,7 +543,7 @@ void fs_pwd() {
 	char* temp = (char*)malloc(256);
 	strcpy(temp, curr_path);
 	free(curr_path);
-	curr_path = pwd(string(curr_path));
+	curr_path = pwd(string(temp));
 	free(temp);
 	printf("%s\n", curr_path);
 }
