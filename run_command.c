@@ -89,7 +89,7 @@ int fs_ls(char **args, int argn) {
 			}
 			if(f_status->type == DIRECTORY_FILE)
 				printf("%s%s\t",cur_entry->file_name,"/");
-			else if(f_status->permission == EXEONLY)
+			else if(f_status->permission == 1 || f_status->permission == 3 || f_status->permission == 5 || f_status->permission == 7)
 				printf("%s%s\t",cur_entry->file_name,"*");
 			else
 				printf("%s\t",cur_entry->file_name);
@@ -126,7 +126,12 @@ int fs_ls(char **args, int argn) {
 					strcpy(p_char,"xrw");
 					break;	
 			}
-			printf("%s   %d   %d    %d    %s\n",p_char,f_status->uid,f_status->gid,f_status->filesize, cur_entry->file_name);
+			char type;
+			if(f_status->type == DIRECTORY_FILE)
+				type = 'd';
+			else
+				type = '-';
+			printf("%c%s   %d   %d    %d    %s\n",type,p_char,f_status->uid,f_status->gid,f_status->filesize, cur_entry->file_name);
 			free(cur_file);
 			free(p_char);
 		}
