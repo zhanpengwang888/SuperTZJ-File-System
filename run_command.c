@@ -605,8 +605,8 @@ int fs_rmdir(char** args, int argn) {
 	            if(p_list[j] == f_name){
 	            	bzero(curr_path,MAX_LEN);
 	            	string tmp_input = "";
-	            	for(int i = 0; i <= j; i ++) {
-	            		tmp_input = tmp_input + p_list[i];
+	            	for(int i = 0; i < j; i ++) {
+	            		tmp_input = tmp_input + "/" + p_list[i];
 	            	}
 	            	strcpy(curr_path,tmp_input.c_str());
 	            	printf("curr_path is %s\n",curr_path);
@@ -623,8 +623,8 @@ int fs_rmdir(char** args, int argn) {
 	            if(p_list[j] == f_name){
 	            	bzero(curr_path,MAX_LEN);
 	            	string tmp_input = "";
-	            	for(int i = 0; i <= j; i ++) {
-	            		tmp_input = tmp_input + p_list[i];
+	            	for(int i = 0; i < j; i ++) {
+	            		tmp_input = tmp_input + "/" + p_list[i];
 	            	}
 	            	strcpy(curr_path,tmp_input.c_str());
 	            	printf("curr_path is %s\n",curr_path);
