@@ -93,12 +93,15 @@ int f_mount(char* destination, char* diskname) {
 int f_unmount(char* diskname) {
 	for (int i = 0; i < MAX_OPEN_FILE; i++) {
 		free(open_file_table[i]);
+		open_file_table[i] = NULL;
 	}
 	num_of_total_inode = (sb->data_offset - sb->inode_offset) * BOOT_SIZE / sizeof(inode);
 	for (int i = 0; i < num_of_total_inode; ++i) {
 		free(disk_inode_region[i]);
+		open_file_table[i] = NULL;
 	}
 	free(sb);
+	sb = NULL;
 	close(disk);
 	return SUCCESS;
 }
