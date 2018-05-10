@@ -523,6 +523,7 @@ int fs_cd(char **args, int argn) {
 	}
 	else {
 		strcpy(tocheck, curr_path);
+		strcat(tocheck, "/");
 		strcat(tocheck, args[1]);
 		fd = f_opendir(string(args[1]));
 		if (fd < 0) {
@@ -570,6 +571,7 @@ int fs_mkdir(char** args, int argn) {
 		return FAIL;
 	}
 	else {
+		
 		return f_mkdir(string(args[2]), atoi(args[1]));
 	}
 }
