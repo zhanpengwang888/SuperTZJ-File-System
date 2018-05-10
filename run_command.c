@@ -768,7 +768,7 @@ void microcat(const string file_name, int file_descriptor_to_be_written)
 
   int size_of_file = get_file_size(fd);
   char buffer[size_of_file + 1];
-
+  bzero(buffer, size_of_file + 1);
   // error checking and handling
   if (fd < 0)
   {
@@ -821,7 +821,7 @@ void microcat_using_syscall(const string file_name, int file_descriptor_to_be_wr
 
   int size_of_file = get_file_size(fd);
   char buffer[size_of_file + 1];
-
+  bzero(buffer, size_of_file + 1);
   // error checking and handling
   if (fd < 0)
   {
@@ -886,10 +886,12 @@ int microcat_calling(char **args, int argn) {
 				//fd = open(argv[argc - 1], O_RDWR | O_CREAT | O_APPEND, 0666);
 				if (*args[i] == '-') {
 					microcat_stdin(fd);
+					f_close(fd);
 				}
 				else {
 					temp_file_path = "/" + string(args[i]);
 					microcat(temp_file_path, fd);
+					f_close(fd);
 				}
 			} else if (i == 1) {
 				// delete all the content of the txt file that needs to be overwritten.
@@ -898,6 +900,7 @@ int microcat_calling(char **args, int argn) {
 				fd = f_open(temp_file_path, "a");
 				temp_file_path = "/" + string(args[i]);
 				microcat(temp_file_path, fd);
+				f_close(fd);
 			}
 		}
 		else if (IsRightRedirection(args, argn))
@@ -921,6 +924,7 @@ int microcat_calling(char **args, int argn) {
 				else {
 					temp_file_path = "/" + string(args[i]);
 					microcat(temp_file_path, fd);
+					f_close(fd);
 				}
 			}
 			else if (i == 1)
@@ -931,9 +935,11 @@ int microcat_calling(char **args, int argn) {
 				fd = f_open(temp_file_path, "w");
 				temp_file_path = "/" + string(args[i]);
 				microcat(temp_file_path, fd);
+				f_close(fd);
 			}
 		} else if (IsLeftRedirection(args, argn)) {
-			microcat_using_syscall(args[argn - 1], standard_output);
+			string temp_file_path = "/" + string(args[argn - 1]);
+			microcat_using_syscall(temp_file_path, standard_output);
 		} else {
 			// microcat all the text files if there is no redirection symbol.
 			if (*args[i] == '-')
