@@ -47,19 +47,19 @@ char* get_cur_file_path(char* cur_dir, char* cur_filename) {
 int fs_ls(char **args, int argn) {
 	//mode 1 is -F
 	//mode 2 is -l
-	int mode;
-	if (argn != 2) {
+	int mode = 0;
+	if (argn != 2 && argn != 1) {
 		return FAIL;
 	}
-	if (strcmp(args[1], "-F")) {
-		mode = 1;
+	if(argn == 2) {
+	  if (strcmp(args[1], "-F") == 0) {
+	    mode = 1;
+	  }
+	  else if (strcmp(args[1], "-l") == 0) {
+	    mode = 2;
+	  }
 	}
-	else if (strcmp(args[1], "-l")) {
-		mode = 2;
-	}
-	else {
-		return FAIL;
-	}
+	printf("the mode is %d\n",mode);
 	int cur_dir = f_opendir(curr_path);
 	int cur_fd;
 	struct fileStat* f_status = (struct fileStat *)malloc(sizeof(fileStat));
@@ -70,6 +70,8 @@ int fs_ls(char **args, int argn) {
 	directory_entry* cur_entry;
 	while(1){
 		cur_entry = f_readdir(cur_dir);
+		if(cur_entry != NULL)
+		  printf("the file name is %s, inode is %d\n",cur_entry->file_name, cur_entry->inode_entry);
 		if(cur_entry == NULL) {
 			//let the directory go back to the beginning
 			//f_seek(cur_dir,0,"SEEK_SET");
@@ -146,6 +148,7 @@ int fs_ls(char **args, int argn) {
 	}
 	return TRUE;
 }
+
 
 void bJobs()
 {
