@@ -89,7 +89,7 @@ int fs_ls(char **args, int argn) {
 			}
 			if(f_status->type == DIRECTORY_FILE)
 				printf("%s%s\t",cur_entry->file_name,"/");
-			else if(f_status->permission == 1 || f_status->permission == 3 || f_status->permission == 5 || f_status->permission == 7)
+			else if(f_status->permission == EXEONLY)
 				printf("%s%s\t",cur_entry->file_name,"*");
 			else
 				printf("%s\t",cur_entry->file_name);
@@ -126,12 +126,7 @@ int fs_ls(char **args, int argn) {
 					strcpy(p_char,"xrw");
 					break;	
 			}
-			char type;
-			if(f_status->type == DIRECTORY_FILE)
-				type = 'd';
-			else
-				type = '-';
-			printf("%c%s   %d   %d    %d    %s\n",type,p_char,f_status->uid,f_status->gid,f_status->filesize, cur_entry->file_name);
+			printf("%s   %d   %d    %d    %s\n",p_char,f_status->uid,f_status->gid,f_status->filesize, cur_entry->file_name);
 			free(cur_file);
 			free(p_char);
 		}
@@ -715,12 +710,11 @@ int only_right_redirection(char **arg, int size)
 // check if it is the right redirection ">"
 int IsRightRedirection(char **arg, int size)
 {
-	if(only_right_redirection(arg, size))
+	if(!only_right_redirection(arg, size))
 		return FALSE;
 	string command = string(conversion(arg, size));
 	vector<string> command_string_list = split(command, '>'); // split it by '>'
-	vector<string> command_string_list_double = split(command, '>>'); // split by ">>"
-	if (command_string_list.size() > 1 && command_string_list_double.size() <= 1)
+	if (command_string_list.size() > 1)
 		return TRUE;
 	return FALSE;
 }
@@ -739,11 +733,11 @@ int only_left_redirection(char **arg, int size)
 // check if it is the left redirection "<"
 int IsLeftRedirection(char **arg, int size)
 {
-	if(only_left_redirection(arg, size))
+	if(!only_left_redirection(arg, size))
 		return FALSE;
 	string command = string(conversion(arg, size));
 	vector<string> command_string_list = split(command, '<'); // split it by '>'
-	if (command_string_list.size() > 1)
+	if (command_string_list[command_string_list.size()-1][0] == '>')
 		return TRUE;
 	return FALSE;
 }
@@ -758,13 +752,13 @@ int doubleRedirection(char **arg, int size) {
 }
 
 // our fs version
-void microcat(const char *file_name, int file_descriptor_to_be_written)
+void microcat(const string file_name, int file_descriptor_to_be_written)
 {
   int fd, wr, rd;
   fd = f_open(string(file_name), "r");
   //(file_name, O_RDONLY);
 
-  int size_of_file = get_file_size(string(file_name));
+  int size_of_file = get_file_size(fd);
   char buffer[size_of_file + 1];
 
   // error checking and handling
@@ -773,7 +767,8 @@ void microcat(const char *file_name, int file_descriptor_to_be_written)
 	cout << "[cat] No such file or directory" << endl;
     //char error[] = "No such file or directory.\n";
     //write(1, error, sizeof error);
-    exit(EXIT_FAILURE);
+    //exit(EXIT_FAILURE);
+	  return;
   }
 
   // read and write
@@ -784,7 +779,8 @@ void microcat(const char *file_name, int file_descriptor_to_be_written)
 	cout << "[cat] Something is wrong!" << endl;
     //char err[] = "Something is wrong!\n";
     //write(1, err, sizeof err);
-    exit(EXIT_FAILURE);
+    //exit(EXIT_FAILURE);
+	  return;
   }
   buffer[size_of_file + 1] = '\n';
   //wr = write(file_descriptor_to_be_written, buffer, size_of_file);
@@ -795,25 +791,27 @@ void microcat(const char *file_name, int file_descriptor_to_be_written)
     cout << "[cat]Something goes wrong!" << endl;
 	//char err[] = "Something is wrong!\n";
     //write(1, err, sizeof err);
-    exit(EXIT_FAILURE);
+    //exit(EXIT_FAILURE);
+	  return;
   }
   if (f_close(fd) < 0)
   {
     //char error[] = "Can't close the file!";
     //write(1, error, sizeof error);
     cout << "[cat] Fail to close the file" << endl;
-	exit(EXIT_FAILURE);
+	//exit(EXIT_FAILURE);
+	  return;
   }
 }
 
 // syscall verison
-void microcat_using_syscall(const char *file_name, int file_descriptor_to_be_written)
+void microcat_using_syscall(const string file_name, int file_descriptor_to_be_written)
 {
   int fd, wr, rd;
   fd = f_open(string(file_name), "r");
   //(file_name, O_RDONLY);
 
-  int size_of_file = get_file_size(string(file_name));
+  int size_of_file = get_file_size(fd);
   char buffer[size_of_file + 1];
 
   // error checking and handling
@@ -822,7 +820,8 @@ void microcat_using_syscall(const char *file_name, int file_descriptor_to_be_wri
 	cout << "[cat] No such file or directory" << endl;
     //char error[] = "No such file or directory.\n";
     //write(1, error, sizeof error);
-    exit(EXIT_FAILURE);
+    //exit(EXIT_FAILURE);
+	  return;
   }
 
   // read and write
@@ -833,7 +832,8 @@ void microcat_using_syscall(const char *file_name, int file_descriptor_to_be_wri
 	cout << "[cat] Something is wrong!" << endl;
     //char err[] = "Something is wrong!\n";
     //write(1, err, sizeof err);
-    exit(EXIT_FAILURE);
+    //exit(EXIT_FAILURE);
+	  return;
   }
   buffer[size_of_file + 1] = '\n';
   wr = write(file_descriptor_to_be_written, buffer, size_of_file);
@@ -843,14 +843,16 @@ void microcat_using_syscall(const char *file_name, int file_descriptor_to_be_wri
     cout << "[cat]Something goes wrong!" << endl;
 	//char err[] = "Something is wrong!\n";
     //write(1, err, sizeof err);
-    exit(EXIT_FAILURE);
+    //exit(EXIT_FAILURE);
+	  return;
   }
   if (f_close(fd) < 0)
   {
     //char error[] = "Can't close the file!";
     //write(1, error, sizeof error);
     cout << "[cat] Fail to close the file" << endl;
-	exit(EXIT_FAILURE);
+	//exit(EXIT_FAILURE);
+	  return;
   }
 }
 
@@ -870,37 +872,56 @@ int microcat_calling(char **args, int argn) {
 			if (strncmp(args[i], ">>", sizeof(">>")) != 0 && i != 1 && i != (argn - 1))
 			{
 				// I assume that the txt file to be written into is to the right of '>'
-				fd = f_open(args[argn - 1], "a");
+				//fd = f_open(args[argn - 1], "a");
+				string temp_file_path = "/" + string(args[argn - 1]);
+				fd = f_open(temp_file_path, "a");
 				//fd = open(argv[argc - 1], O_RDWR | O_CREAT | O_APPEND, 0666);
-				if (*args[i] == '-')
+				if (*args[i] == '-') {
 					microcat_stdin(fd);
-				else
-					microcat(args[i], fd);
+				}
+				else {
+					temp_file_path = "/" + string(args[i]);
+					microcat(temp_file_path, fd);
+				}
 			} else if (i == 1) {
 				// delete all the content of the txt file that needs to be overwritten.
 				//fd = open(argv[argc - 1], O_RDWR | O_CREAT | O_TRUNC, 0666);
-				fd = f_open(args[argn - 1], "a");
-				microcat(args[i], fd);
+				string temp_file_path = "/" + string(args[argn - 1]);
+				fd = f_open(temp_file_path, "a");
+				temp_file_path = "/" + string(args[i]);
+				microcat(temp_file_path, fd);
 			}
 		}
 		else if (IsRightRedirection(args, argn))
 		{
-			if (*args[i] != '>' && i != 1 && i != (argn - 1))
+			if (*args[i] == '-') {
+				string temp_file_path = "/" + string(args[argn - 1]);
+				fd = f_open(temp_file_path, "a");
+				microcat_stdin(fd);
+				f_close(fd);
+			}
+			else if (*args[i] != '>' && i != 1 && i != (argn - 1))
 			{
 				// I assume that the txt file to be written into is to the right of '>'
-				fd = f_open(args[argn - 1], "a");
+				string temp_file_path = "/" + string(args[argn - 1]);
+				fd = f_open(temp_file_path, "a");
 				//fd = open(argv[argc - 1], O_RDWR | O_CREAT | O_APPEND, 0666);
 				if (*args[i] == '-')
 					microcat_stdin(fd);
-				else
-					microcat(args[i], fd);
+					f_close(fd);
+				else {
+					temp_file_path = "/" + string(args[i]);
+					microcat(temp_file_path, fd);
+				}
 			}
 			else if (i == 1)
 			{
 				// delete all the content of the txt file that needs to be overwritten.
 				//fd = open(argv[argc - 1], O_RDWR | O_CREAT | O_TRUNC, 0666);
-				fd = f_open(args[argn - 1], "w");
-				microcat(args[i], fd);
+				string temp_file_path = "/" + string(args[argn - 1]);
+				fd = f_open(temp_file_path, "w");
+				temp_file_path = "/" + string(args[i]);
+				microcat(temp_file_path, fd);
 			}
 		} else if (IsLeftRedirection(args, argn)) {
 			microcat_using_syscall(args[argn - 1], standard_output);
@@ -908,8 +929,10 @@ int microcat_calling(char **args, int argn) {
 			// microcat all the text files if there is no redirection symbol.
 			if (*args[i] == '-')
 				microcat_stdin_using_syscall(standard_output);
-			else
-				microcat_using_syscall(args[i], standard_output);
+			else {
+				string temp_file_path = "/" + string(args[i]);
+				microcat_using_syscall(temp_file_path, standard_output);
+			}
 		}
 	}
 }
