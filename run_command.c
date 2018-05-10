@@ -562,6 +562,15 @@ int fs_chmod(char **args, int argn) {
 	else if (strcmp(args[0], "chmod") != 0) {
 		return FAIL;
 	}
+	if (args[2][0] != '/')
+       	{
+		char* tocheck = (char*) malloc(256);
+		strcpy(tocheck, curr_path);
+		strcat(tocheck, "/");
+		strcat(tocheck, args[2]);
+		change_mode(atoi(args[1]), string(tocheck));
+	}
+
 	return change_mode(atoi(args[1]), string(args[2]));
 }
 
@@ -575,6 +584,14 @@ int fs_mkdir(char** args, int argn) {
 	}
 	else {
 		
+		if (args[2][0] != '/') 
+		{
+			char* tocheck = (char*) malloc(256);
+			strcpy(tocheck, curr_path);
+			strcat(tocheck, "/");
+			strcat(tocheck, args[2]);
+			return f_mkdir(string(tocheck), atoi(args[1]));
+		}
 		return f_mkdir(string(args[2]), atoi(args[1]));
 	}
 }
@@ -584,6 +601,13 @@ int fs_rmdir(char** args, int argn) {
 		return FAIL;
 	}
 	else {
+		if (args[1][0] != '/') {
+			char* tocheck = (char*) malloc(256);
+			strcpy(tocheck, curr_path);
+			strcat(tocheck, "/");
+			strcat(tocheck, args[1]);
+			f_rmdir(string(tocheck));
+		}
 		return f_rmdir(string(args[1]));
 	}
 }
