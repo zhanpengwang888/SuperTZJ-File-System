@@ -3008,12 +3008,10 @@ void print_file_table() {
 }
 
 // helper function to get the size of a file
-size_t get_file_size(string file_name) {
-	int fd = f_open(file_name, "r");
+size_t get_file_size(int fd) {
 	file_node* file = open_file_table[fd];
 	int file_inode_index = file->inode_entry;
 	inode* file_inode = disk_inode_region[file_inode_index];
 	size_t file_size = file_inode->size;
-	f_close(fd);
 	return file_size;
 }
