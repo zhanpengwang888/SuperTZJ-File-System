@@ -568,7 +568,7 @@ int fs_chmod(char **args, int argn) {
 		strcpy(tocheck, curr_path);
 		strcat(tocheck, "/");
 		strcat(tocheck, args[2]);
-		change_mode(atoi(args[1]), string(tocheck));
+		return change_mode(atoi(args[1]), string(tocheck));
 	}
 
 	return change_mode(atoi(args[1]), string(args[2]));
@@ -606,7 +606,7 @@ int fs_rmdir(char** args, int argn) {
 			strcpy(tocheck, curr_path);
 			strcat(tocheck, "/");
 			strcat(tocheck, args[1]);
-			f_rmdir(string(tocheck));
+			return f_rmdir(string(tocheck));
 		}
 		return f_rmdir(string(args[1]));
 	}
