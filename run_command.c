@@ -12,12 +12,12 @@ int fs_rm(char* file_path) {
 			char* tocheck = (char*) malloc(256);
 			strcpy(tocheck, curr_path);
 			strcat(tocheck, "/");
-			strcat(tocheck, args[1]);
+			strcat(tocheck, file_path);
 			//check whether the path contains upper directory
 			return f_remove(string(tocheck));
 		}
 		else {
-			return f_rmdir(string(args[1]));
+			return f_rmdir(string(file_path));
 		}                                                                                                 
 }
 
