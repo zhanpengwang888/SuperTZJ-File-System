@@ -23,7 +23,7 @@ void rewind(int fd);
 int traverse_dir(int dirinode_index, string filename);
 int get_next_free_block(int block_index);
 vector<string> split(const string &s, char delim);
-size_t get_file_size(string file_name);
+size_t get_file_size(int fd);
 int change_mode(int mode, string path);
 char* pwd(string file_path);
 #endif
