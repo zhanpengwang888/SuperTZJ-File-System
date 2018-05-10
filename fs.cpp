@@ -2969,15 +2969,16 @@ char* pwd(string file_path) {
 			bzero(transfer_buffer, 256);
 			strcpy(transfer_buffer, to_return);
 			bzero(to_return, 256);
-			strcpy(to_return, curr_inode->file_name);
-			strcat(to_return, "/");
+			strcpy(to_return, "/");
+			strcat(to_return, curr_inode->file_name);
+			//strcat(to_return, "/");
 			strcat(to_return, transfer_buffer);
 			inode_index = curr_inode->parent;
 		}
 		bzero(transfer_buffer, 256);
 		strcpy(transfer_buffer, to_return);
 		bzero(to_return, 256);
-		strcat(to_return, "/");
+		//strcat(to_return, "/");
 		strcat(to_return, transfer_buffer);
 		free(transfer_buffer);
 		return to_return;

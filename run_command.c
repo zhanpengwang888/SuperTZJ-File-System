@@ -525,7 +525,7 @@ int fs_cd(char **args, int argn) {
 		strcpy(tocheck, curr_path);
 		strcat(tocheck, "/");
 		strcat(tocheck, args[1]);
-		fd = f_opendir(string(args[1]));
+		fd = f_opendir(string(tocheck));
 		if (fd < 0) {
 			free(tocheck);
 			return FAIL;
@@ -546,6 +546,9 @@ void fs_pwd() {
 	free(curr_path);
 	curr_path = pwd(string(temp));
 	free(temp);
+	if (curr_path == NULL) {
+		return;
+	}
 	printf("%s\n", curr_path);
 }
 
