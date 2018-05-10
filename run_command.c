@@ -911,9 +911,10 @@ int microcat_calling(char **args, int argn) {
 				string temp_file_path = "/" + string(args[argn - 1]);
 				fd = f_open(temp_file_path, "a");
 				//fd = open(argv[argc - 1], O_RDWR | O_CREAT | O_APPEND, 0666);
-				if (*args[i] == '-')
+				if (*args[i] == '-') {
 					microcat_stdin(fd);
 					f_close(fd);
+				}
 				else {
 					temp_file_path = "/" + string(args[i]);
 					microcat(temp_file_path, fd);
