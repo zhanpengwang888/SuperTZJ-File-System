@@ -19,6 +19,7 @@ Known bugs and limitations
 	2. The redirection can not work generally in our file system, the redirection depends on cat command to work. So it is hard to test big file. We provide a test_large.cpp test case in our Testing folder to cover this case though.
 	3.In the file name, we can not let user create file name with "/", because that is the special symbol for directory. The file can be created, but without "/".
 	4. We didn't have time to deal with memory leak, and there are several minor invalid read in memory.
+	5. We didn't test the i3block. So it might be some problems in our i3block.
 
 
 file directory:
