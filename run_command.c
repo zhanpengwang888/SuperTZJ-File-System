@@ -17,9 +17,22 @@ char* get_cur_file_path(char* cur_dir, char* cur_filename) {
 
 //ls need to know the current directory path
 //readdir will return NULL if it is the end of directory
-void ls(int mode) {
+void fs_ls(char **args, int argn) {
 	//mode 1 is -F
 	//mode 2 is -l
+	int mode;
+	if (argn != 2) {
+		return FAIL;
+	}
+	if (strcmp(args[1], "-F")) {
+		mode = 1;
+	}
+	else if (strcmp(args[1], "-l")) {
+		mode = 2;
+	}
+	else {
+		return FAIL;
+	}
 	int cur_dir = f_opendir(curr_path);
 	int cur_fd;
 	struct fileStat* f_status = (struct fileStat *)malloc(sizeof(fileStat));
@@ -536,6 +549,23 @@ int fs_rmdir(char** args, int argn) {
 }
 
 
+int fs_mount(char** args, int argn) {
+	if (argn != 2) {
+		return FAIL;
+	}
+	else {
+		return f_mount("/", args[1]); 
+	}
+}
+
+int fs_unmount(char** args, int argn) {
+	if (argn != 2) {
+		return FAIL;
+	}
+	else {
+		return f_unmount("/", args[1]); 
+	}
+}
 
 
 
@@ -937,6 +967,10 @@ int check_built_in(Job *job)
 
 int exeBuiltIn(char **args, int argn, sigset_t child_mask)
 {
+	if (strlen(curr_path) >= 128) {
+		char* temp = pwd();
+		free(temp);
+	}
 	if (strcmp(args[0], "kill") == 0)
 	{
 		bKill(args, argn);
@@ -956,37 +990,27 @@ int exeBuiltIn(char **args, int argn, sigset_t child_mask)
 	// Homework 7 additional built-in commands
 	else if (strcmp(args[0], "ls") == 0)
 	{
-	    if(argn == 1)
-	    	ls(0);
-	    else{
-	    	if(argn == 2 && strcmp(args[1],"-F") == 0)
-	    		ls(1);
-	    	else if(argn == 2 && strcmp(args[1],"-l") == 0)
-	    		ls(2);
-	    	else
-	    		return FALSE;
-	    }
-	    return TRUE; // this needs to be changed
+		return fs_ls(args, argn);
 	}
 	else if (strcmp(args[0], "chmod") == 0)
 	{
-	    return TRUE; // this needs to be changed
+	    return fs_chmod(args, argn); // this needs to be changed
 	}
 	else if (strcmp(args[0], "mkdir") == 0)
 	{
-	    return TRUE; // this needs to be changed
+	    return fs_mkdir(args, argn); // this needs to be changed
 	}
 	else if (strcmp(args[0], "rmdir") == 0)
 	{
-	    return TRUE; // this needs to be changed
+	    return fs_rmdir(args, argn); // this needs to be changed
 	}
 	else if (strcmp(args[0], "cd") == 0)
 	{
-	    return TRUE; // this needs to be changed
+	    return fs_cd(args, argn); // this needs to be changed
 	}
 	else if (strcmp(args[0], "pwd") == 0)
 	{
-	    return TRUE; // this needs to be changed
+	    return fs_pwd(); // this needs to be changed
 	}
 	else if (strcmp(args[0], "cat") == 0)
 	{

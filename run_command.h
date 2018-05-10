@@ -19,10 +19,12 @@ int exeBuiltIn(char** args, int argn, sigset_t child_mask);
 int changeDirectory(char** args);
 int check_built_in(Job* job);
 void put_job_in_foreground(Job* job, sigset_t child_mask, int flag_stop);
-void ls(int mode);
+void fs_ls(char **args, int argn);
 int fs_cd(char **args, int argn);
 void fs_pwd();
 int fs_chmod(char **args, int argn);
 int fs_mkdir(char** args, int argn);
 int fs_rmdir(char** args, int argn);
+int fs_mount(char** args, int argn);
+int fs_unmount(char** args, int argn)
 #endif
