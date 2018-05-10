@@ -712,12 +712,12 @@ void bBg(char **args, int argn)
 }
 
 // cat built-in command implementation starts here
-// Not Tested yet. Potential buggy.
+// Tested and Robust
 
 string conversion(char **arg, int size) {
 	string temp = "";
 	for (int i = 1; i < size; i++) {
-		temp += *arg[i];
+		temp = temp + " " + arg[i];
 	}
 	return temp;
 }
@@ -805,10 +805,15 @@ int IsLeftRedirection(char **arg, int size)
 
 // check if the command is double redirection
 int doubleRedirection(char **arg, int size) {
-	string command = string(conversion(arg, size));
-	vector<string> command_string_list = split(command, '>'); // split it by ">>"
-	if (command_string_list[command_string_list.size()-1][0] == '>')
-		return TRUE;
+  //string command = string(conversion(arg, size));
+  //	vector<string> command_string_list = split(command, '>'); // split it by ">>"
+  //	if (command_string_list[command_string_list.size()-1][0] == '>')
+  //		return TRUE;
+  //	return FALSE;
+	for (int i = 0; i < size; i++) {
+	  if (string(arg[i]) == ">>")
+	    return TRUE;
+	}
 	return FALSE;
 }
 
@@ -819,11 +824,8 @@ void microcat(const string file_name, int file_descriptor_to_be_written)
   fd = f_open(string(file_name), "r");
   //(file_name, O_RDONLY);
 
-  int size_of_file = get_file_size(fd);
-  char buffer[size_of_file + 1];
-  bzero(buffer, size_of_file + 1);
   // error checking and handling
-  if (fd < 0)
+  if (fd < 0 || open_file_table[fd]->inode_entry == -1)
   {
 	cout << "[cat] No such file or directory" << endl;
     //char error[] = "No such file or directory.\n";
@@ -832,6 +834,10 @@ void microcat(const string file_name, int file_descriptor_to_be_written)
 	  return;
   }
 
+  int size_of_file = get_file_size(fd);
+  char buffer[size_of_file + 1];
+  bzero(buffer, size_of_file + 1);
+  
   // read and write
   //rd = read(fd, buffer, size_of_file);
   rd = f_read(buffer, size_of_file, 1, fd);
@@ -872,11 +878,8 @@ void microcat_using_syscall(const string file_name, int file_descriptor_to_be_wr
   fd = f_open(string(file_name), "r");
   //(file_name, O_RDONLY);
 
-  int size_of_file = get_file_size(fd);
-  char buffer[size_of_file + 1];
-  bzero(buffer, size_of_file + 1);
   // error checking and handling
-  if (fd < 0)
+  if (fd < 0 || open_file_table[fd]->inode_entry == -1)
   {
 	cout << "[cat] No such file or directory" << endl;
     //char error[] = "No such file or directory.\n";
@@ -884,7 +887,10 @@ void microcat_using_syscall(const string file_name, int file_descriptor_to_be_wr
     //exit(EXIT_FAILURE);
 	  return;
   }
-
+  int size_of_file = get_file_size(fd);
+  char buffer[size_of_file + 1];
+  bzero(buffer, size_of_file + 1);
+  
   // read and write
   //rd = read(fd, buffer, size_of_file);
   rd = f_read(buffer, size_of_file, 1, fd);
@@ -930,7 +936,14 @@ int microcat_calling(char **args, int argn) {
 	{
 		if (doubleRedirection(args, argn))
 		{
-			if (strncmp(args[i], ">>", sizeof(">>")) != 0 && i != 1 && i != (argn - 1))
+		  if (argn == 3) {
+                          string temp_file_path = string(curr_path) + "/" + string(args[argn - 1]);
+                          fd = f_open(temp_file_path, "w");
+                          microcat_stdin(fd);
+                          f_close(fd);
+			  return SUCCESS;
+                        }
+		  else if (strncmp(args[i], ">>", sizeof(">>")) != 0 && i != 1 && i != (argn - 1))
 			{
 				// I assume that the txt file to be written into is to the right of '>'
 				//fd = f_open(args[argn - 1], "a");
@@ -960,9 +973,15 @@ int microcat_calling(char **args, int argn) {
 		{
 			if (*args[i] == '-') {
 			  string temp_file_path = string(curr_path) + "/" + string(args[argn - 1]);
-				fd = f_open(temp_file_path, "a");
+				fd = f_open(temp_file_path, "w");
 				microcat_stdin(fd);
 				f_close(fd);
+			} else if (argn == 3) {
+			  string temp_file_path = string(curr_path) + "/" + string(args[argn - 1]);
+			  fd = f_open(temp_file_path, "w");
+			  microcat_stdin(fd);
+			  f_close(fd);
+			  return SUCCESS;
 			}
 			else if (*args[i] != '>' && i != 1 && i != (argn - 1))
 			{
@@ -991,8 +1010,11 @@ int microcat_calling(char **args, int argn) {
 				f_close(fd);
 			}
 		} else if (IsLeftRedirection(args, argn)) {
+		  if (*args[i] != '<') {
 		  string temp_file_path = string(curr_path) + "/" + string(args[argn - 1]);
 			microcat_using_syscall(temp_file_path, standard_output);
+			return SUCCESS;
+		  }
 		} else {
 			// microcat all the text files if there is no redirection symbol.
 			if (*args[i] == '-')
@@ -1003,6 +1025,7 @@ int microcat_calling(char **args, int argn) {
 			}
 		}
 	}
+	return SUCCESS;
 }
 
 // cat command implementation ends here
