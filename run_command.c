@@ -9,27 +9,24 @@ int last_backgrounded; // keep track of the last backgrounded job
 int fs_rm(char* file_name) {
 	//parse the file_name list
 
-	vector<string> f_list = split(string(file_name),' ');
 	char* f_name = (char*)malloc(MAX_LEN);
-	int result;
-	for (int i = 0; i < f_list.size(); i++)
-	{
-		cout << "This element is " << f_list[i] << endl;
-		//open the file to get is type
-		strcpy(f_name,curr_path);
-		strcat(f_name,"/");
-		strcat(f_name,f_list[i].c_str());
-		int test_fd = f_opendir(f_name);
-		if(test_fd >= 0) {
-			printf("Can remove directory use \"rm\" command, please use rmdir\n");
-			return FAIL;
-		}
-		result = f_remove(f_name);
-		if(result < 0) {
-			printf("Something wrong with the f_remove\n");
-			return FAIL;
-		}
+	int result;	
+	//open the file to get is type
+	strcpy(f_name,curr_path);
+	strcat(f_name,"/");
+	strcat(f_name,file_name);
+// 	int test_fd = f_opendir(f_name);
+// 	if(test_fd >= 0) {
+// 		printf("Can remove directory use \"rm\" command, please use rmdir\n");
+// 		return FAIL;
+// 	}
+	result = f_remove(f_name);
+	//f_closedir(test_fd);
+	if(result < 0) {
+		printf("Something wrong with the f_remove\n");
+		return FAIL;
 	}
+	
 	return SUCCESS;
 }
 
@@ -42,111 +39,114 @@ char* get_cur_file_path(char* cur_dir, char* cur_filename) {
         return cur_file_path;
 }
 
-//ls need to know the current directory path
-//readdir will return NULL if it is the end of directory
+//ls need to know the current directory path                                                                                           
+//readdir will return NULL if it is the end of directory                                                                               
 int fs_ls(char **args, int argn) {
-	//mode 1 is -F
-	//mode 2 is -l
-	int mode = 0;
-	if (argn != 2 && argn != 1) {
-		return FAIL;
-	}
-	if(argn == 2) {
-	  if (strcmp(args[1], "-F") == 0) {
-	    mode = 1;
-	  }
-	  else if (strcmp(args[1], "-l") == 0) {
-	    mode = 2;
-	  }
-	}
-	printf("the mode is %d\n",mode);
-	int cur_dir = f_opendir(curr_path);
-	int cur_fd;
-	struct fileStat* f_status = (struct fileStat *)malloc(sizeof(fileStat));
-	if( cur_dir == -1) {
-		printf("there is something wrong with cur_dir, it is %s\n",curr_path);
-		//initalize cur_path and global_path
-	}
-	directory_entry* cur_entry;
-	while(1){
-		cur_entry = f_readdir(cur_dir);
-		if(cur_entry != NULL)
-		  printf("the file name is %s, inode is %d\n",cur_entry->file_name, cur_entry->inode_entry);
-		if(cur_entry == NULL) {
-			//let the directory go back to the beginning
-			//f_seek(cur_dir,0,"SEEK_SET");
-			f_closedir(cur_dir);
-			return TRUE;
-		}
-		if(mode == 1) {
-			if(strcmp(cur_entry->file_name,".")== 0 || strcmp(cur_entry->file_name,"..") == 0) {
-				printf("%s\t",cur_entry->file_name);
-				continue;
-			}
-			char* cur_file = get_cur_file_path(curr_path,cur_entry->file_name);
-			cur_fd = f_open(string(cur_file),"r");
-			if(f_stat(cur_fd,f_status) < 0) {
-				printf("there are some problems reading this file\n");
-				continue;
-			}
-			if(f_status->type == DIRECTORY_FILE)
-				printf("%s%s\t",cur_entry->file_name,"/");
-			else if(f_status->permission == 1 || f_status->permission == 3 || f_status->permission == 5 || f_status->permission == 7)
-				printf("%s%s\t",cur_entry->file_name,"*");
-			else
-				printf("%s\t",cur_entry->file_name);
-			free(cur_file);
-		}
-		else if(mode == 2) {
-			if(strcmp(cur_entry->file_name,".")== 0 || strcmp(cur_entry->file_name,"..") == 0) {
-				continue;
-			}
-			char* cur_file = get_cur_file_path(curr_path,cur_entry->file_name);
-			cur_fd = f_open(string(cur_file),"r");
-			if(f_stat(cur_fd,f_status) < 0) {
-				printf("there are some problems reading this file\n");
-				continue;
-			}
-			char* p_char = (char*)(malloc(4));
-			switch(f_status->permission) {
-				case 1:
-					strcpy(p_char,"x--");
-					break;
-				case 2:
-					strcpy(p_char,"--w");
-					break;
-				case 3:
-					strcpy(p_char,"x-w");
-					break;
-				case 4:
-					strcpy(p_char,"-r-");
-					break;
-				case 5:
-					strcpy(p_char,"xr-");
-					break;
-				case 7:
-					strcpy(p_char,"xrw");
-					break;	
-			}
-			char type;
-			if(f_status->type == DIRECTORY_FILE)
-				type = 'd';
-			else
-				type = '-';
-			printf("%c%s   %d   %d    %d    %s\n",type,p_char,f_status->uid,f_status->gid,f_status->filesize, cur_entry->file_name);
-			free(cur_file);
-			free(p_char);
-		}
+        //mode 1 is -F                                                                                                                 
+        //mode 2 is -l                                                                                                                 
+        int mode = 0;
+        if (argn != 2 && argn != 1) {
+                return FAIL;
+        }
+        if(argn == 2) {
+          if (strcmp(args[1], "-F") == 0) {
+            mode = 1;
+          }
+          else if (strcmp(args[1], "-l") == 0) {
+            mode = 2;
+          }
+        }
+        printf("the mode is %d\n",mode);
+        int cur_dir = f_opendir(curr_path);
+        int cur_fd;
+        struct fileStat* f_status = (struct fileStat *)malloc(sizeof(fileStat));
+        if( cur_dir == -1) {
+                printf("there is something wrong with cur_dir, it is %s\n",curr_path);
+                //initalize cur_path and global_path                                                                                   
+        }
+        directory_entry* cur_entry;
+        while(1){
+                cur_entry = f_readdir(cur_dir);
+                if(cur_entry != NULL)
+                  printf("the file name is %s, inode is %d\n",cur_entry->file_name, cur_entry->inode_entry);
+                if(cur_entry == NULL) {
+                        //let the directory go back to the beginning                                                                   
+                        //f_seek(cur_dir,0,"SEEK_SET");                                                                                
+                        f_closedir(cur_dir);
+                        return TRUE;
+                }
+                if(mode == 1) {
+                        if(strcmp(cur_entry->file_name,".")== 0 || strcmp(cur_entry->file_name,"..") == 0) {
+                                printf("%s\t",cur_entry->file_name);
+                                continue;
+                        }
+                        char* cur_file = get_cur_file_path(curr_path,cur_entry->file_name);
+                        cur_fd = f_open(string(cur_file),"r");
+                        if(f_stat(cur_fd,f_status) < 0) {
+                                printf("there are some problems reading this file\n");
+                                continue;
+                        }
+                        if(f_status->type == DIRECTORY_FILE)
+                                printf("%s%s\t",cur_entry->file_name,"/");
+                        else if(f_status->permission == 1 || f_status->permission == 3 || f_status->permission == 5 || f_status->permi\
+ssion == 7)
+                                printf("%s%s\t",cur_entry->file_name,"*");
+                        else
+                                printf("%s\t",cur_entry->file_name);
+                        free(cur_file);
+                        f_close(cur_fd);
+                }
+				else if(mode == 2) {
+                        if(strcmp(cur_entry->file_name,".")== 0 || strcmp(cur_entry->file_name,"..") == 0) {
+                                continue;
+                        }
+                        char* cur_file = get_cur_file_path(curr_path,cur_entry->file_name);
+                        cur_fd = f_open(string(cur_file),"r");
+                        if(f_stat(cur_fd,f_status) < 0) {
+                                printf("there are some problems reading this file\n");
+                                continue;
+                        }
+                        char* p_char = (char*)(malloc(4));
+                        switch(f_status->permission) {
+                                case 1:
+                                        strcpy(p_char,"x--");
+                                        break;
+                                case 2:
+                                        strcpy(p_char,"--w");
+                                        break;
+                                case 3:
+                                        strcpy(p_char,"x-w");
+                                        break;
+                                case 4:
+                                        strcpy(p_char,"-r-");
+                                        break;
+                                case 5:
+                                        strcpy(p_char,"xr-");
+                                        break;
+                                case 7:
+                                        strcpy(p_char,"xrw");
+ 						}
+                        char type;
+                        if(f_status->type == DIRECTORY_FILE)
+                                type = 'd';
+                        else
+                                type = '-';
+                        printf("%c%s   %d   %d    %d    %s\n",type,p_char,f_status->uid,f_status->gid,f_status->filesize, cur_entry->f\
+ile_name);
+                        free(cur_file);
+                        free(p_char);
+                        f_close(cur_fd);
+                }
 
-		//deal with deafult mode
-		else {
-			if(strcmp(cur_entry->file_name,".")== 0 || strcmp(cur_entry->file_name,"..") == 0) {
-				continue;
-			}
-			printf("%s\t",cur_entry->file_name);
-		}
-	}
-	return TRUE;
+                //deal with deafult mode                                                                                               
+                else {
+                        if(strcmp(cur_entry->file_name,".")== 0 || strcmp(cur_entry->file_name,"..") == 0) {
+                                continue;
+                        }
+                        printf("%s\t",cur_entry->file_name);
+                }
+        }
+        return TRUE;
 }
 
 
@@ -606,9 +606,42 @@ int fs_rmdir(char** args, int argn) {
 			strcpy(tocheck, curr_path);
 			strcat(tocheck, "/");
 			strcat(tocheck, args[1]);
+			//check whether the path contains upper directory
+			vector<string>f_path = split(string(tocheck),'/');
+            vector<string>p_list = split(string(curr_path),'/');
+            string f_name = f_path[f_path.size()-1];
+	          for(int j = 0; j < p_list.size() ; j++) {
+	            if(p_list[j] == f_name){
+	            	bzero(curr_path,MAX_LEN);
+	            	string tmp_input = "";
+	            	for(int i = 0; i <= j; i ++) {
+	            		tmp_input = tmp_input + p_list[i];
+	            	}
+	            	strcpy(curr_path,tmp_input.c_str());
+	            	printf("curr_path is %s\n",curr_path);
+	            	break;
+		    	}   
+	          }
 			return f_rmdir(string(tocheck));
 		}
-		return f_rmdir(string(args[1]));
+		else {
+			vector<string>f_path = split(string(args[1]),'/');
+            vector<string>p_list = split(string(curr_path),'/');
+            string f_name = f_path[f_path.size()-1];
+	          for(int j = 0; j < p_list.size() ; j++) {
+	            if(p_list[j] == f_name){
+	            	bzero(curr_path,MAX_LEN);
+	            	string tmp_input = "";
+	            	for(int i = 0; i <= j; i ++) {
+	            		tmp_input = tmp_input + p_list[i];
+	            	}
+	            	strcpy(curr_path,tmp_input.c_str());
+	            	printf("curr_path is %s\n",curr_path);
+	            	break;
+		    	}   
+	          }
+			return f_rmdir(string(args[1]));
+		}
 	}
 }
 
