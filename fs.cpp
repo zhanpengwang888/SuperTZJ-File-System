@@ -1396,7 +1396,7 @@ vector<string> split(const string &s, char delim)
 int add_to_file_table(int inode_num, inode *f_node,int mode)
 {
 	//get the inode from inode region
-	printf("the add to file talbe is testing!*************************************\n");
+	//printf("the add to file talbe is testing!*************************************\n");
 	int i;
 	for (i = 0; i < MAX_OPEN_FILE; i++)
 	{
@@ -1410,7 +1410,7 @@ int add_to_file_table(int inode_num, inode *f_node,int mode)
 			break;
 		}
 	}
-	print_file_status(i);
+	//print_file_status(i);
 	return i;
 }
 
@@ -1423,13 +1423,15 @@ directory_entry* deal_last_entry(int dirinode_index, const char* filename) {
 	int last_block_offset = size/BLOCK_SIZE + 1;
 	int last_byte_offset = size%BLOCK_SIZE;
 	//test printing
-	printf("test deal last entry print ****************************\n");
-	printf("last_block_offset %d\n",last_block_offset);
-	printf("last_byte offset %d\n",last_byte_offset);
+	//printf("test deal last entry print ****************************\n");
+	//printf("last_block_offset %d\n",last_block_offset);
+	//printf("last_byte offset %d\n",last_byte_offset);
 
 	//get the data block of the last entry
 	int last_block_index = get_index_by_offset(cur,last_block_offset);
-	printf("last_block_index %d\n",last_block_index);
+	
+	//printf("last_block_index %d\n",last_block_index);
+	
 	//get the block of entry from disk
 	char* last_entry_block = (char*)(malloc(BLOCK_SIZE));
 	size_t last_entry_addr = BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE + last_block_index * BLOCK_SIZE;
@@ -1438,10 +1440,13 @@ directory_entry* deal_last_entry(int dirinode_index, const char* filename) {
 
 	//use block to get the specific entry 
 	int last_entry_index = last_byte_offset/(sizeof(directory_entry));
-	printf("last_entry_index %d\n",last_entry_index);
+	
+	//printf("last_entry_index %d\n",last_entry_index);
+	
 	directory_entry* entry_table = (directory_entry*)last_entry_block;
-	printf("last_entry filename is %s\n",entry_table[last_entry_index].file_name);
-	printf("last_entry inode is %d\n",entry_table[last_entry_index].inode_entry);
+	
+	//printf("last_entry filename is %s\n",entry_table[last_entry_index].file_name);
+	//printf("last_entry inode is %d\n",entry_table[last_entry_index].inode_entry);
 	//create a return directory entry
 	directory_entry* return_node = (directory_entry*)(malloc(sizeof(directory_entry)));
 	strcpy(return_node->file_name, entry_table[last_entry_index].file_name);
@@ -1497,8 +1502,8 @@ int swap_entry(int dirinode_index, string filename)
 	// now lets check the data region to check if the given filename exists or not
 	// first, look into the direct data blocks
 	size_t remaining_size = direct->size; // get the size of the directory, and says it is the remaining size.
-	printf("swap entry testing print! &&&&&&&&&&&&&&&&&&&&&&&&&&&&\n");
-	printf("remaining_size is %ld\n",remaining_size);
+	//printf("swap entry testing print! &&&&&&&&&&&&&&&&&&&&&&&&&&&&\n");
+	//printf("remaining_size is %ld\n",remaining_size);
 	cout << "the file name is " << filename << endl;
 	int data_offset = sb->data_offset;	// get the data offset from the super block
 	size_t data_region_starting_addr = BOOT_SIZE + SUPER_SIZE + data_offset * BLOCK_SIZE;
@@ -1928,7 +1933,7 @@ int f_remove(const string path) {
 		return EXIT_FAILURE;
 	}
 	//test printing before clean
-	printf("This is f_remove test printing!########################\n");
+	//printf("This is f_remove test printing!########################\n");
 	//print_superblock(sb);
 	//print_inode(target,dir_node,1);
 	
@@ -1942,7 +1947,7 @@ int f_remove(const string path) {
 	//test printing
 	//print_superblock(sb);
 	//print_inode(target,dir_node,1);
-	printf("next free inode is %d\n",target->next_inode);
+	//printf("next free inode is %d\n",target->next_inode);
 
 	return SUCCESS;
 
@@ -1951,9 +1956,9 @@ int f_remove(const string path) {
 int f_open(const string restrict_path, const string restrict_mode)
 {
 	//we need to check mode here to avoid invalid mode
-	printf("fopen testing print!!! ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n");
+	//printf("fopen testing print!!! ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n");
 	//print_file_table();
-	printf("thhe file is %s, the mode of file is %s\n",restrict_path.c_str(),restrict_mode.c_str());
+	//printf("the file is %s, the mode of file is %s\n",restrict_path.c_str(),restrict_mode.c_str());
 	if (restrict_mode != "r" && restrict_mode != "w" && restrict_mode != "a")
 	{
 		cout << "The open mode is incorrect, please input \"r\" or \"w\" or \"a\"" << endl;
@@ -1985,12 +1990,12 @@ int f_open(const string restrict_path, const string restrict_mode)
 		//not that simple need to consider restrict_mode
 		if (dir_node == -1)
 		{
-			cout << "The file path is incorrect" << endl;
+			//cout << "The file path is incorrect" << endl;
 			// return FAIL;
 			break;
 		}
 	}
-	printf("the dir_node of this file is %d\n",dir_node);
+	//printf("the dir_node of this file is %d\n",dir_node);
 	if (dir_node == -1) {
 		if (counter != path_list.size() - 1) {
 			return EXIT_FAILURE;
@@ -2021,16 +2026,16 @@ int f_open(const string restrict_path, const string restrict_mode)
 		3.find the first data block index
 		4.set the rest
 	*/
-	printf("It should come to here at least once\n");
+	//printf("It should come to here at least once\n");
 	inode *target = disk_inode_region[dir_node];
 	//if not in the file table, add an new element in it
 	int result;
 	if(restrict_mode == "r"){
-		printf("come in read mode\n");
+		//printf("come in read mode\n");
 		result = add_to_file_table(dir_node, target,RDONLY);
 	}
 	else{
-		printf("come in write mode\n");
+		//printf("come in write mode\n");
 		result = add_to_file_table(dir_node, target,WRONLY);
 	}
 	//print_file_table();
@@ -2062,14 +2067,14 @@ int f_open(const string restrict_path, const string restrict_mode)
 			int block_offset = target->size/BLOCK_SIZE + 1;
 			int byte_offset = target->size%BLOCK_SIZE;
 			int block_index = get_index_by_offset(target,block_offset);
-			printf("block_index we have is %d\n",block_index);
+			//printf("block_index we have is %d\n",block_index);
 			open_file_table[result]->block_index = block_index;
 			open_file_table[result]->block_offset = block_offset;
 			open_file_table[result]->byte_offset = byte_offset;
-			print_file_status(result);
+			//print_file_status(result);
 		}
 	}
-	printf("the f_open test printing ends$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n");
+	//printf("the f_open test printing ends$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n");
 	return result;
 }
 
@@ -2193,7 +2198,7 @@ size_t f_write(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 	// Check if it is a valid file descriptor. Then, checking if the file is open or not.
 	// Next, check if the user has the right permission to write the file.
 	file_node *target_file = open_file_table[fd]; // get the file
-	printf("This is f_write test printing! &&&&&&&&&&&&&&&&&&&&&&&&&\n");
+	//printf("This is f_write test printing! &&&&&&&&&&&&&&&&&&&&&&&&&\n");
 	if (fd < 0 || fd > MAX_OPEN_FILE) {
 		printf("Invalid file descriptor.\n");
 		return FAIL;
@@ -2502,7 +2507,7 @@ size_t f_write(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 	target_file->block_index = curr_block;
 	printf("I am fucking here, and the block index is %d------------------------------------\n", target_file->block_index);
 	target_file->byte_offset = (BLOCK_SIZE - padding) % BLOCK_SIZE;
-	print_file_status(fd);
+	//print_file_status(fd);
 	update_sb();
 
 	// int temp = sb->free_block;
@@ -2547,8 +2552,8 @@ int f_close(int fd)
 	target_file->mode = 0;
 	open_file_table[fd] = target_file; // put the modified file node back into the open file table.
 	//test printing
-	printf("This is f_close test printing!**************************\n");
-	print_file_status(fd);
+	//printf("This is f_close test printing!**************************\n");
+	//print_file_status(fd);
 	return SUCCESS;
 }
 
