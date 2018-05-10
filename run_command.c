@@ -6,9 +6,9 @@
 
 int last_backgrounded; // keep track of the last backgrounded job
 // built-in command: jobs
-int fs_rm(char* file_name) {
+int fs_rm(char* file_path) {
         //parse the file_name list  
-        if (args[1][0] != '/') {
+        if (file_path[0] != '/') {
 			char* tocheck = (char*) malloc(256);
 			strcpy(tocheck, curr_path);
 			strcat(tocheck, "/");
