@@ -6,6 +6,33 @@
 
 int last_backgrounded; // keep track of the last backgrounded job
 // built-in command: jobs
+int fs_rm(char* file_name) {
+	//parse the file_name list
+
+	vector<string> f_list = split(string(file_name)," ");
+	char* f_name = (char*)malloc(MAX_LEN);
+	int result;
+	for (int i = 0; i < f_list.size(); i++)
+	{
+		cout << "This element is " << f_list[i] << endl;
+		//open the file to get is type
+		strcpy(f_name,curr_path);
+		strcat(f_name,"/");
+		strcat(f_name,f_list[i].c_str());
+		int test_fd = f_opendir(f_name)
+		if(test_fd >= 0) {
+			printf("Can remove directory use \"rm\" command, please use rmdir\n");
+			return FAIL;
+		}
+		result = f_remove(f_name);
+		if(result < 0) {
+			printf("Something wrong with the f_remove\n");
+			return FAIL
+		}
+	}
+	return SUCCESS;
+}
+
 char* get_cur_file_path(char* cur_dir, char* cur_filename) {
         char* cur_file_path = (char*)malloc(256);
         strcpy(cur_file_path,cur_dir);
@@ -1022,7 +1049,18 @@ int exeBuiltIn(char **args, int argn, sigset_t child_mask)
 	}
 	else if (strcmp(args[0], "rm") == 0)
 	{
-	    return TRUE; // this needs to be changed
+	    if(argn == 2) {
+	    	int result = fs_rm(args[1]);
+	    	if(result == 0)
+	    		return TRUE;
+	    	else
+	    		return FALSE;
+	    }
+	    else {
+	    	printf("More than one pipe? We don't support any more");
+	    	return FALSE;
+	    }
+		return TRUE; // this needs to be changed
 	}
 	else if (strcmp(args[0], "mount") == 0)
 	{
