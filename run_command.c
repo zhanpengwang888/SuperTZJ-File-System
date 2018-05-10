@@ -1184,11 +1184,18 @@ int exeBuiltIn(char **args, int argn, sigset_t child_mask)
 	}
 	else if (strcmp(args[0], "mount") == 0)
 	{
-	    
+	    if(argn != 2)
+		    return FALSE;
+	    else
+		f_mount("/",args[1]);
 	    return TRUE; // this needs to be changed
 	}
 	else if (strcmp(args[0], "umount") == 0)
 	{
+	    if(argn != 2)
+		    return FALSE;
+	    else
+		f_unmount(args[1]);
 	    return TRUE; // this needs to be changed
 	}
 	else
