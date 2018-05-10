@@ -19,7 +19,7 @@ int fs_rm(char* file_name) {
 		strcpy(f_name,curr_path);
 		strcat(f_name,"/");
 		strcat(f_name,f_list[i].c_str());
-		int test_fd = f_opendir(f_name)
+		int test_fd = f_opendir(f_name);
 		if(test_fd >= 0) {
 			printf("Can remove directory use \"rm\" command, please use rmdir\n");
 			return FAIL;
@@ -27,7 +27,7 @@ int fs_rm(char* file_name) {
 		result = f_remove(f_name);
 		if(result < 0) {
 			printf("Something wrong with the f_remove\n");
-			return FAIL
+			return FAIL;
 		}
 	}
 	return SUCCESS;
@@ -44,7 +44,7 @@ char* get_cur_file_path(char* cur_dir, char* cur_filename) {
 
 //ls need to know the current directory path
 //readdir will return NULL if it is the end of directory
-void fs_ls(char **args, int argn) {
+int fs_ls(char **args, int argn) {
 	//mode 1 is -F
 	//mode 2 is -l
 	int mode;
@@ -74,7 +74,7 @@ void fs_ls(char **args, int argn) {
 			//let the directory go back to the beginning
 			//f_seek(cur_dir,0,"SEEK_SET");
 			f_closedir(cur_dir);
-			return;
+			return TRUE;
 		}
 		if(mode == 1) {
 			if(strcmp(cur_entry->file_name,".")== 0 || strcmp(cur_entry->file_name,"..") == 0) {
@@ -139,7 +139,7 @@ void fs_ls(char **args, int argn) {
 			printf("%s\t",cur_entry->file_name);
 		}
 	}
-
+	return TRUE;
 }
 
 void bJobs()
@@ -590,7 +590,7 @@ int fs_unmount(char** args, int argn) {
 		return FAIL;
 	}
 	else {
-		return f_unmount("/", args[1]); 
+		return f_unmount(args[1]); 
 	}
 }
 
@@ -995,7 +995,7 @@ int check_built_in(Job *job)
 int exeBuiltIn(char **args, int argn, sigset_t child_mask)
 {
 	if (strlen(curr_path) >= 128) {
-		char* temp = pwd();
+		char* temp = pwd(string(curr_path));
 		free(temp);
 	}
 	if (strcmp(args[0], "kill") == 0)
@@ -1037,7 +1037,8 @@ int exeBuiltIn(char **args, int argn, sigset_t child_mask)
 	}
 	else if (strcmp(args[0], "pwd") == 0)
 	{
-	    return fs_pwd(); // this needs to be changed
+	    fs_pwd(); // this needs to be changed
+	    return TRUE;
 	}
 	else if (strcmp(args[0], "cat") == 0)
 	{
