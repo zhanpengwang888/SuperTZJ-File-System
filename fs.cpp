@@ -2941,7 +2941,7 @@ int change_mode(int mode, string path) {
 		this_inode->permission = mode;
 		lseek(disk, BOOT_SIZE + SUPER_SIZE + sb->inode_offset * BLOCK_SIZE + inode_index * sizeof(inode), SEEK_SET);
 		write(disk, this_inode, sizeof(inode));
-		f_close(fd);
+		f_close(fd);ch
 		return SUCCESS;
 	}
 }
@@ -2983,6 +2983,7 @@ char* pwd(string file_path) {
 		//strcat(to_return, "/");
 		strcat(to_return, transfer_buffer);
 		free(transfer_buffer);
+		f_closedir(fd);
 		return to_return;
 	}
 }
