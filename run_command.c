@@ -742,7 +742,7 @@ int IsLeftRedirection(char **arg, int size)
 		return FALSE;
 	string command = string(conversion(arg, size));
 	vector<string> command_string_list = split(command, '<'); // split it by '>'
-	if (command_string_list[command_string_list.size()-1][0] == '>')
+	if (command_string_list.size() > 1)
 		return TRUE;
 	return FALSE;
 }
@@ -751,7 +751,7 @@ int IsLeftRedirection(char **arg, int size)
 int doubleRedirection(char **arg, int size) {
 	string command = string(conversion(arg, size));
 	vector<string> command_string_list = split(command, '>>'); // split it by ">>"
-	if (command_string_list.size() > 1)
+	if (command_string_list[command_string_list.size()-1][0] == '>')
 		return TRUE;
 	return FALSE;
 }
