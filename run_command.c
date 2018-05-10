@@ -86,7 +86,7 @@ void ls(int mode) {
 					strcpy(p_char,"xrw");
 					break;	
 			}
-			printf("%s   %d   %d    %ld    %s\n",p_char,f_status->uid,f_status->gid,f_status->filesize, cur_entry->file_name);
+			printf("%s   %d   %d    %d    %s\n",p_char,f_status->uid,f_status->gid,f_status->filesize, cur_entry->file_name);
 			free(cur_file);
 			free(p_char);
 		}
