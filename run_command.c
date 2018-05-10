@@ -755,7 +755,7 @@ int IsLeftRedirection(char **arg, int size)
 // check if the command is double redirection
 int doubleRedirection(char **arg, int size) {
 	string command = string(conversion(arg, size));
-	vector<string> command_string_list = split(command, '>>'); // split it by ">>"
+	vector<string> command_string_list = split(command, '>'); // split it by ">>"
 	if (command_string_list[command_string_list.size()-1][0] == '>')
 		return TRUE;
 	return FALSE;
@@ -883,7 +883,7 @@ int microcat_calling(char **args, int argn) {
 			{
 				// I assume that the txt file to be written into is to the right of '>'
 				//fd = f_open(args[argn - 1], "a");
-				string temp_file_path = "/" + string(args[argn - 1]);
+			  string temp_file_path = string(curr_path) + "/" + string(args[argn - 1]);
 				fd = f_open(temp_file_path, "a");
 				//fd = open(argv[argc - 1], O_RDWR | O_CREAT | O_APPEND, 0666);
 				if (*args[i] == '-') {
@@ -891,16 +891,16 @@ int microcat_calling(char **args, int argn) {
 					f_close(fd);
 				}
 				else {
-					temp_file_path = "/" + string(args[i]);
+				  temp_file_path = string(curr_path) + "/" + string(args[i]);
 					microcat(temp_file_path, fd);
 					f_close(fd);
 				}
 			} else if (i == 1) {
 				// delete all the content of the txt file that needs to be overwritten.
 				//fd = open(argv[argc - 1], O_RDWR | O_CREAT | O_TRUNC, 0666);
-				string temp_file_path = "/" + string(args[argn - 1]);
+			  string temp_file_path = string(curr_path) + "/" + string(args[argn - 1]);
 				fd = f_open(temp_file_path, "a");
-				temp_file_path = "/" + string(args[i]);
+				temp_file_path = string(curr_path) + "/" + string(args[i]);
 				microcat(temp_file_path, fd);
 				f_close(fd);
 			}
@@ -908,7 +908,7 @@ int microcat_calling(char **args, int argn) {
 		else if (IsRightRedirection(args, argn))
 		{
 			if (*args[i] == '-') {
-				string temp_file_path = "/" + string(args[argn - 1]);
+			  string temp_file_path = string(curr_path) + "/" + string(args[argn - 1]);
 				fd = f_open(temp_file_path, "a");
 				microcat_stdin(fd);
 				f_close(fd);
@@ -916,7 +916,7 @@ int microcat_calling(char **args, int argn) {
 			else if (*args[i] != '>' && i != 1 && i != (argn - 1))
 			{
 				// I assume that the txt file to be written into is to the right of '>'
-				string temp_file_path = "/" + string(args[argn - 1]);
+			  string temp_file_path = string(curr_path) + "/" + string(args[argn - 1]);
 				fd = f_open(temp_file_path, "a");
 				//fd = open(argv[argc - 1], O_RDWR | O_CREAT | O_APPEND, 0666);
 				if (*args[i] == '-') {
@@ -924,7 +924,7 @@ int microcat_calling(char **args, int argn) {
 					f_close(fd);
 				}
 				else {
-					temp_file_path = "/" + string(args[i]);
+				  temp_file_path = string(curr_path) + "/" + string(args[i]);
 					microcat(temp_file_path, fd);
 					f_close(fd);
 				}
@@ -933,21 +933,21 @@ int microcat_calling(char **args, int argn) {
 			{
 				// delete all the content of the txt file that needs to be overwritten.
 				//fd = open(argv[argc - 1], O_RDWR | O_CREAT | O_TRUNC, 0666);
-				string temp_file_path = "/" + string(args[argn - 1]);
+			  string temp_file_path = string(curr_path) + "/" + string(args[argn - 1]);
 				fd = f_open(temp_file_path, "w");
-				temp_file_path = "/" + string(args[i]);
+				temp_file_path = string(curr_path) + "/" + string(args[i]);
 				microcat(temp_file_path, fd);
 				f_close(fd);
 			}
 		} else if (IsLeftRedirection(args, argn)) {
-			string temp_file_path = "/" + string(args[argn - 1]);
+		  string temp_file_path = string(curr_path) + "/" + string(args[argn - 1]);
 			microcat_using_syscall(temp_file_path, standard_output);
 		} else {
 			// microcat all the text files if there is no redirection symbol.
 			if (*args[i] == '-')
 				microcat_stdin_using_syscall(standard_output);
 			else {
-				string temp_file_path = "/" + string(args[i]);
+			  string temp_file_path = string(curr_path) + "/" + string(args[i]);
 				microcat_using_syscall(temp_file_path, standard_output);
 			}
 		}
