@@ -14,4 +14,4 @@ format: format.cpp fs.h Testing/test_util.h
 # clean all the executable and object files                                                                                                                                     
 SHELL:=/bin/bash -O extglob
 clean:
-	@rm -f !(*.c|Makefile|README.md|*.h|democode|presentation|*.cpp|Testing)
+	@rm -f !(*.c|Makefile|README.md|*.h|democode|presentation|*.cpp|Testing|auto_mysh.sh)
