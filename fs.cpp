@@ -412,9 +412,9 @@ int format_with_given_size(string filename, long int file_size)
 
 
 int f_seek(int fd, long int offset, char* whence) {
-	printf("here is f_seek test printing!! &&&&&&&&&&&&&&&&&&&&&&\n");
-	printf("the whence is whence is %s\n",whence);
-	print_file_status(fd);
+	//printf("here is f_seek test printing!! &&&&&&&&&&&&&&&&&&&&&&\n");
+	//printf("the whence is whence is %s\n",whence);
+	//print_file_status(fd);
 	if (fd < 0 or fd > MAX_OPEN_FILE) {
 		return EXIT_FAILURE;
 	}
@@ -434,14 +434,14 @@ int f_seek(int fd, long int offset, char* whence) {
 	}
 	else {
 		if (strcmp(whence, "SEEK_SET") == 0) {
-			printf("it comes in SEEK_SET\n");
+			//printf("it comes in SEEK_SET\n");
 			if (offset > disk_inode_region[inode_idx]->size) {
 				return EXIT_FAILURE;
 			}
 			cur_file->block_offset = offset / BLOCK_SIZE + 1;
 			cur_file->byte_offset = offset % BLOCK_SIZE;
 			cur_file->block_index = get_index_by_offset(disk_inode_region[inode_idx], cur_file->block_offset);
-			printf("if finishes its job in SEEK_SET\n");
+			//printf("if finishes its job in SEEK_SET\n");
 		}
 		else if (strcmp(whence, "SEEK_CUR") == 0) {
 			long int to_modify = cur_file->block_offset * BLOCK_SIZE + cur_file->byte_offset + offset;
@@ -462,8 +462,8 @@ int f_seek(int fd, long int offset, char* whence) {
 			cur_file->block_index = get_index_by_offset(disk_inode_region[inode_idx], cur_file->block_offset);
 		}
 	}
-	printf("the current fd after f_seek is: \n");
-	print_file_status(fd);
+	//printf("the current fd after f_seek is: \n");
+	//print_file_status(fd);
 	return EXIT_SUCCESS;
 }
 
@@ -509,8 +509,8 @@ void update_sb() {
 }
 //get the index of block, read corresponding data block in disk image and free them,
 void clean_block(int index) {
-	printf("clean_block test printing !!! &&&&&&&&&&&&&&&&&");
-	printf("the current head of free_block list is %d\n",sb->free_block);
+	//printf("clean_block test printing !!! &&&&&&&&&&&&&&&&&");
+	//printf("the current head of free_block list is %d\n",sb->free_block);
 	size_t data_start = BOOT_SIZE + SUPER_SIZE + sb->data_offset * BLOCK_SIZE;
   	size_t data_address = data_start + index*BLOCK_SIZE;
   	//get the data block
@@ -533,7 +533,7 @@ void clean_block(int index) {
   	//set the next free block to be the current head of free block list in superblock
   	//update superblock's free block element
   	sb->free_block = index;
-  	printf("after free, the current head of free_block list is %d\n",sb->free_block);
+  	//printf("after free, the current head of free_block list is %d\n",sb->free_block);
   	//do we need to update superblock in the disk? ----- NOT DONE YET !!!!!!!!
   	free(data_buffer);
 }
@@ -578,7 +578,7 @@ int get_index_by_offset(inode* f_node, int offset) {
 	else if(offset > d_limit && offset <= i_limit) {
 		int i_elem = index - d_limit; //know the exact position in indirect block list
 		b_index = get_index(f_node->iblocks[i_elem/entry_num],i_elem%entry_num);
-		printf("I am in get index by offset, and the iblock index is %d, with a offset of %d\n", f_node->iblocks[i_elem/entry_num], i_elem%entry_num);
+		//printf("I am in get index by offset, and the iblock index is %d, with a offset of %d\n", f_node->iblocks[i_elem/entry_num], i_elem%entry_num);
 		return b_index;
 	}
 	else if(offset > i_limit && offset <= i2_limit) {
@@ -610,7 +610,7 @@ void clean_file(inode* f_node) {
 	int remain = f_node->size;
   	int num_indir_idx = BLOCK_SIZE / sizeof(int);
   //arrange the direct blocks
-  printf("******************Cleaning direct blocks*******************\n");
+  //printf("******************Cleaning direct blocks*******************\n");
   for(int i = 0; i < N_DBLOCKS ; i++) {
     clean_block(f_node->dblocks[i]);
     remain = remain - BLOCK_SIZE;
@@ -620,7 +620,7 @@ void clean_file(inode* f_node) {
 
   //arrange indirect blocks
   //arrange first level indirect blocks
-  printf("*********************clearing indirect blocks************************\n");
+  //printf("*********************clearing indirect blocks************************\n");
   for(int i = 0; i < N_IBLOCKS; i++) {
     // int index_arr[num_indir_idx];
     // bzero(index_arr,sizeof(index_arr));
@@ -1507,7 +1507,7 @@ int swap_entry(int dirinode_index, string filename)
 	size_t remaining_size = direct->size; // get the size of the directory, and says it is the remaining size.
 	//printf("swap entry testing print! &&&&&&&&&&&&&&&&&&&&&&&&&&&&\n");
 	//printf("remaining_size is %ld\n",remaining_size);
-	cout << "the file name is " << filename << endl;
+	//cout << "the file name is " << filename << endl;
 	int data_offset = sb->data_offset;	// get the data offset from the super block
 	size_t data_region_starting_addr = BOOT_SIZE + SUPER_SIZE + data_offset * BLOCK_SIZE;
 	for (int i = 0; i < N_DBLOCKS; i++)
@@ -2102,7 +2102,7 @@ size_t f_read(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 		return FAIL;
 	} else if (target_file->mode != RDONLY && target_file->mode != RDONLY + WRONLY && target_file->mode != RDONLY + WRONLY + EXEONLY) {
 		printf("Permission Denied!!!!!\n");
-		print_file_status(fd);
+		//print_file_status(fd);
 		return FAIL;
 	} else if (size <= 0 || nitems <=0) {
 		printf("Invalid size or nitems.\n");
@@ -2134,8 +2134,8 @@ size_t f_read(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 	void* tmp_ptr = restrict_ptr;
 	int file_size = file_inode->size; // get the file size.
 	// potential buggy while loop!!!!!!!!!!!!!!!!!!!!!!
-	print_file_status(fd);
-	printf("This is f_read test printing!**************************\n");
+	//print_file_status(fd);
+	//printf("This is f_read test printing!**************************\n");
 	// if the file size is less than the size requested by the user
 	//calculate the current spot of cursor
 	int cursor = (target_file->block_offset - 1)*BLOCK_SIZE + target_file->byte_offset;
@@ -2147,14 +2147,14 @@ size_t f_read(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 		remaining_size = file_size - cursor;
 		size_requested = file_size - cursor;
 	}
-	printf("remaining_size is %d\n",remaining_size);
+	//printf("remaining_size is %d\n",remaining_size);
 	while (remaining_size >0) {
 		if (lseek(disk, data_region_starting_addr + BLOCK_SIZE * block_index + byte_offset, SEEK_SET) == FAIL) {
-			print_file_status(fd);
+			//print_file_status(fd);
 			perror("[lseek in f_read] Fails");
 			return FAIL;
 		}
-		printf("We're reading block %d in f_Read------------------------------\n", block_index);
+		//printf("We're reading block %d in f_Read------------------------------\n", block_index);
 		if (byte_offset != 0) {
 			//printf("the byte offset is not 0\n");
 			int bytes_read = BLOCK_SIZE - byte_offset;
@@ -2170,7 +2170,7 @@ size_t f_read(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 			if (0 < remaining_size && remaining_size <= BLOCK_SIZE) {
 				tmp_ptr  = (void*)((char*)restrict_ptr + tmp + BLOCK_SIZE * i);
 				int test = read(disk, tmp_ptr, remaining_size);
-				printf("the test tmp_ptr now is %s and %d, with a block index of %d\n",(char*)tmp_ptr,test, block_index);
+				//printf("the test tmp_ptr now is %s and %d, with a block index of %d\n",(char*)tmp_ptr,test, block_index);
 				//printf("the test tmp_ptr now is %s and %d\n",(char*)tmp_ptr,test);
 				if (remaining_size == BLOCK_SIZE) {
 					byte_offset = 0;
@@ -2188,12 +2188,12 @@ size_t f_read(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 					open_file_table[fd] = target_file; // put the new file node into the open file table.
 				}
 				//testing print
-				print_file_status(fd);
+				//print_file_status(fd);
 				return size_requested;
 			} else {
 				tmp_ptr  = (void*)((char*)restrict_ptr + tmp + BLOCK_SIZE * i);
 				int test = read(disk, tmp_ptr, BLOCK_SIZE);
-				printf("the test tmp_ptr now is %s and %d, with a block index of %d\n",(char*)tmp_ptr,test, block_index);
+				//printf("the test tmp_ptr now is %s and %d, with a block index of %d\n",(char*)tmp_ptr,test, block_index);
 				byte_offset = 0; // reset the byte offset
 				block_offset ++; // increment the block offset by 1
 				block_index = get_index_by_offset(file_inode, block_offset); // use the func to get the next block index.
@@ -2242,7 +2242,7 @@ size_t f_write(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 	}
 	int padding = blocks_needed * BLOCK_SIZE - curr_offset - num_byte_need_to_copy;
 	if (padding > 511) {
-		printf("I died here! It sucks!!!\n");
+		//printf("I died here! It sucks!!!\n");
 		return FAIL;
 	}
 	// now our buffer looks like following:
@@ -2516,7 +2516,7 @@ size_t f_write(void *restrict_ptr, size_t size, size_t nitems, int fd) {
 		target_file->block_offset = starting_size / BLOCK_SIZE;
 	}
 	target_file->block_index = curr_block;
-	printf("I am fucking here, and the block index is %d------------------------------------\n", target_file->block_index);
+	//printf("I am fucking here, and the block index is %d------------------------------------\n", target_file->block_index);
 	target_file->byte_offset = (BLOCK_SIZE - padding) % BLOCK_SIZE;
 	//print_file_status(fd);
 	update_sb();

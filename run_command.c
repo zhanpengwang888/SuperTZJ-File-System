@@ -1150,6 +1150,7 @@ int more(string filename) {
 			bu ++;
 		}
 			f_close(fd);
+	return SUCCESS;
 }
 
 void more_calling(char **arg, int argn) {
