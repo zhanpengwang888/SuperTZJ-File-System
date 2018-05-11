@@ -84,7 +84,7 @@ char* get_cur_file_path(char* cur_dir, char* cur_filename) {
         strcpy(cur_file_path,cur_dir);
         strcat(cur_file_path,"/");
         strcat(cur_file_path,cur_filename);
-        printf("cur_file is now %s\n",cur_file_path);
+        //printf("cur_file is now %s\n",cur_file_path);
         return cur_file_path;
 }
 
@@ -158,22 +158,26 @@ ssion == 7)
                         char* p_char = (char*)(malloc(4));
                         switch(f_status->permission) {
                                 case 1:
-                                        strcpy(p_char,"x--");
+                                        strcpy(p_char,"--x");
                                         break;
                                 case 2:
-                                        strcpy(p_char,"--w");
+                                        strcpy(p_char,"-w-");
                                         break;
                                 case 3:
-                                        strcpy(p_char,"x-w");
+                                        strcpy(p_char,"-wx");
                                         break;
                                 case 4:
-                                        strcpy(p_char,"-r-");
+                                        strcpy(p_char,"r--");
                                         break;
                                 case 5:
-                                        strcpy(p_char,"xr-");
+                                        strcpy(p_char,"r-x");
                                         break;
+				case 6:
+					strcpy(p_char,"rw-");
+					break;
                                 case 7:
                                         strcpy(p_char,"xrw");
+					break;
  						}
                         char type;
                         if(f_status->type == DIRECTORY_FILE)
