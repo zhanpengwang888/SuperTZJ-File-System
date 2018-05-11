@@ -914,10 +914,10 @@ int f_opendir(string path)
 	//we can directly use f_open to do this
 	//parse the path to know the filename
 	vector<string> path_list = split(path, '/');
-	for (int i = 0; i < path_list.size(); i++)
+	/*for (int i = 0; i < path_list.size(); i++)
 	{
 		cout << "This element is " << path_list[i] << endl;
-	}
+	}*/
 	int dir_node = sb->root; // starting from the root
 	unsigned int counter = 0;
 	for (counter = 0; counter < path_list.size(); counter++)
@@ -1060,10 +1060,10 @@ int f_mkdir(string path, int mode) {
 	}
 	//parse the path to know the filename
 	vector<string> path_list = split(path, '/');
-	for (int i = 0; i < path_list.size(); i++)
+	/*for (int i = 0; i < path_list.size(); i++)
 	{
 		cout << "This element is " << path_list[i] << endl;
-	}
+	}*/
 	int dir_node = sb->root;
 	int parent_node; // to get the parent directory inode of the 
 	// check if the directory has already existed.
@@ -1108,7 +1108,7 @@ int f_mkdir(string path, int mode) {
 	lseek(disk, data_address + sb->free_block * BLOCK_SIZE, SEEK_SET);
 	read(disk, free_block_char, BLOCK_SIZE);
 	int *free_block = (int*) free_block_char;
-	cout << "So the next free block is " << free_block[0] << "   " << sb->free_block << endl;
+	//cout << "So the next free block is " << free_block[0] << "   " << sb->free_block << endl;
 	sb->free_block = free_block[0];
 	
 	// update the superblock and write it back to the disk
@@ -1148,10 +1148,10 @@ int f_mkdir(string path, int mode) {
 int f_rmdir(string filepath) {
 	//parse the path to know the filename
 	vector<string> path_list = split(filepath, '/');
-	for (int i = 0; i < path_list.size(); i++)
+	/*for (int i = 0; i < path_list.size(); i++)
 	{
 		cout << "This element is " << path_list[i] << endl;
-	}
+	}*/
 	int dir_node = sb->root;
 	// check if the directory has already existed.
 	for (int i = 0; i < path_list.size(); i++){
@@ -1884,10 +1884,10 @@ int remove_p_dir_entry(char* file_name,int parent_index) {
 }
 int f_remove(const string path) {
 	vector<string> path_list = split(path, '/');
-	for (int i = 0; i < path_list.size(); i++)
+	/*for (int i = 0; i < path_list.size(); i++)
 	{
 		cout << "This element is " << path_list[i] << endl;
-	}
+	}*/
 
 	int dir_node = sb->root;
 	bool isLast = false;
@@ -1904,12 +1904,13 @@ int f_remove(const string path) {
 		//not that simple need to consider restrict_mode
 		if (dir_node == -1)
 		{
-			cout << "The file path is incorrect" << endl;
+			//cout << "The file path is incorrect" << endl;
 			// return FAIL;
 			break;
 		}
 	}
 	if (dir_node == -1) {
+		cout << "The file path is incorrect" << endl;
 		//if path is wrong or file does not exist, return fail
 		return EXIT_FAILURE;
 	}
@@ -1969,10 +1970,10 @@ int f_open(const string restrict_path, const string restrict_mode)
 	}
 	//parse the path to know the filename
 	vector<string> path_list = split(restrict_path, '/');
-	for (int i = 0; i < path_list.size(); i++)
+	/*for (int i = 0; i < path_list.size(); i++)
 	{
 		cout << "This element is " << path_list[i] << endl;
-	}
+	}*/
 
 	//we can copy the inode region to memory! so search through the path to see whether the file is in the right position -- in mount
 	//zhanpeng is implementing function traverse_dir(int dir_node, string filename)

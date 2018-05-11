@@ -138,12 +138,12 @@ int login() {
 	printf("Please enter your username:\n");
 	fgets(name,MAXLEN,stdin);
 	parse_input(name);
-	printf("the username is %s\n",name);
+	//printf("the username is %s\n",name);
 	//parse the name
 	printf("Please enter your password:\n");
 	fgets(pw,MAXLEN,stdin);
 	parse_input(pw);
-	printf("the pw is %s\n",pw);
+	//printf("the pw is %s\n",pw);
 	if((strcmp(name,sp_user_name) == 0) && (strcmp(pw,sp_user_password) == 0)) {
 		isSP = 1;
 		printf("Hi My dear super user, welcome back to bugfree file system!\n");
@@ -160,7 +160,7 @@ int login() {
 	home_dir = (char*)malloc(MAXLEN + 1);
 	strcpy(home_dir, "/");
 	strcat(home_dir,name);
-	printf("home dir will be %s\n",home_dir);
+	//printf("home dir will be %s\n",home_dir);
 	//if the directory does not exist, create one
 	if(f_opendir(home_dir) == -1) {
 		int status = f_mkdir(string(home_dir),7);
