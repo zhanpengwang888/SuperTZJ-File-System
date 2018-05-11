@@ -1,5 +1,6 @@
 #include "run_command.h"
 #define MAX_LEN 256
+#include <sys/ioctl.h>
 //need to implement joblock() and jobunlock() to protect joblist
 //void jobunlock();
 //void joblock();
@@ -1030,6 +1031,80 @@ int microcat_calling(char **args, int argn) {
 
 // cat command implementation ends here
 
+// more built-in command implementation starts here                                                                                                                             
+int more(string filename) {
+  int fd = f_open(string(filename), "r");
+	// error checking and handling
+	if (fd < 0 || open_file_table[fd]->inode_entry == -1)
+	{
+		cout << "[cat] No such file or directory" << endl;
+		//char error[] = "No such file or directory.\n";
+		//write(1, error, sizeof error);
+		//exit(EXIT_FAILURE);
+		return FAIL;
+	}
+
+	int size_of_file = get_file_size(fd);
+	char buffer[size_of_file + 1];
+	bzero(buffer, size_of_file + 1);
+	int rd;
+	rd = f_read(buffer, size_of_file, 1, fd);
+	if (rd < 0)
+	{ // read into buffer
+		cout << "[more] Something is wrong!" << endl;
+		//char err[] = "Something is wrong!\n";
+		//write(1, err, sizeof err);
+		//exit(EXIT_FAILURE);
+		return FAIL;
+	}
+	buffer[size_of_file + 1] = '\n';
+	char * bu = buffer;
+	// get the windown size of the terminal
+	struct winsize win;
+	int returned_num = ioctl(STDOUT_FILENO, TIOCGWINSZ, &win);
+	if (returned_num == FAIL) {
+		perror("iotcl");
+		return FAIL;
+	}
+	int row = win.ws_row - 1;
+	int col = win.ws_col;
+			for(int i = 0; i < sizeof(buffer); i++) {
+			putchar(*bu);
+			switch(buffer[i]) {
+				case '\n':
+					row --;
+					col = win.ws_col;
+					break;
+				default:
+					col --;
+					if (col == 0) {
+						row --;
+						col = win.ws_col;
+					}
+			}
+			if (row == 1) {
+				printf("----MORE----");
+				sleep(3);
+				printf("\r");
+				for (int j = 0; j < win.ws_col; i++)
+					printf(" ");
+				row = 2;
+			}
+			bu ++;
+		}
+			f_close(fd);
+}
+
+void more_calling(char **arg, int argn) {
+	for(int i = 1; i < argn; i++) {
+	  string temp = string(curr_path) + "/" + string(arg[i]);
+	  more(temp);
+	}
+}
+
+// more built-in command implementation ends here   
+
+
 int check_built_in(Job *job)
 {
 	if (job->processList == NULL)
@@ -1164,7 +1239,8 @@ int exeBuiltIn(char **args, int argn, sigset_t child_mask)
 	}
 	else if (strcmp(args[0], "more") == 0)
 	{
-	    return TRUE; // this needs to be changed
+	  more_calling(args, argn);
+	  return TRUE;
 	}
 	else if (strcmp(args[0], "rm") == 0)
 	{
