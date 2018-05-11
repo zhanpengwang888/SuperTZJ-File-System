@@ -7,6 +7,63 @@
 
 int last_backgrounded; // keep track of the last backgrounded job
 // built-in command: jobs
+char* add_space(char* ptr, size_t size) {
+	char* tmp = (char*)malloc(size);
+	strcpy(tmp,ptr);
+	//printf("tmp is now %s, size is now %ld\n",tmp,size);
+	free(ptr);
+	return tmp;
+}
+int redirection(char** args, int argn) {
+  int file_desc;
+  //first parse the input, last one is the input file name
+  if (args[argn-1][0] != '/'){
+    char* tocheck = (char*) malloc(256);
+    strcpy(tocheck, curr_path);
+    strcat(tocheck, "/");
+    strcat(tocheck, args[argn-1]);
+    file_desc = f_open(string(tocheck), "w");
+    //check whether the path contains upper directory
+  }
+  else {
+    return f_open(string(args[argn-1]),"w");
+  }
+  string comb = "";
+  for(int i = 0; i < argn - 2; i++) {
+    comb += string(args[i]);
+    if(i != argn -3)
+      comb += " ";
+  }
+  char* content = (char*)(malloc(comb.length() + 1));
+  strcpy(content,comb.c_str());
+  //printf("the content we have is %s\n",content);
+  FILE* fp = popen(content,"r");
+  size_t b_size = 10000;
+  size_t counter = 0;
+  char* tmp_buffer = (char*)malloc(b_size);
+  char p;
+  if(fp==NULL){printf("popen err:%s\n",strerror(errno));exit(1);}
+  char* tmp_ptr = tmp_buffer;
+    //get the file size of fp
+  while((p=fgetc(fp))!=EOF){
+    sprintf(tmp_ptr,"%c",p);
+    if(counter >= b_size) {
+      b_size = b_size * 2;
+      tmp_buffer = add_space(tmp_buffer,b_size);
+      tmp_ptr = tmp_buffer + b_size/2;
+        }
+    tmp_ptr++;
+    counter++;
+  }
+  //printf("now we have %s\n",tmp_buffer);
+  pclose(fp);
+  int status = f_write(tmp_buffer,strlen(tmp_buffer)+1,1,file_desc);
+  if(status < 0) {
+    perror("fail\n");
+  }
+  f_close(file_desc);
+  return 0;
+}
 int fs_rm(char* file_path) {
         //parse the file_name list  
         if (file_path[0] != '/') {
@@ -48,7 +105,7 @@ int fs_ls(char **args, int argn) {
             mode = 2;
           }
         }
-        printf("the mode is %d\n",mode);
+        //printf("the mode is %d\n",mode);
         int cur_dir = f_opendir(curr_path);
         int cur_fd;
         struct fileStat* f_status = (struct fileStat *)malloc(sizeof(fileStat));
@@ -59,8 +116,8 @@ int fs_ls(char **args, int argn) {
         directory_entry* cur_entry;
         while(1){
                 cur_entry = f_readdir(cur_dir);
-                if(cur_entry != NULL)
-                  printf("the file name is %s, inode is %d\n",cur_entry->file_name, cur_entry->inode_entry);
+                //if(cur_entry != NULL)
+                  //printf("the file name is %s, inode is %d\n",cur_entry->file_name, cur_entry->inode_entry);
                 if(cur_entry == NULL) {
                         //let the directory go back to the beginning                                                                   
                         //f_seek(cur_dir,0,"SEEK_SET");                                                                                
@@ -610,7 +667,7 @@ int fs_rmdir(char** args, int argn) {
 	            		tmp_input = tmp_input + "/" + p_list[i];
 	            	}
 	            	strcpy(curr_path,tmp_input.c_str());
-	            	printf("curr_path is %s\n",curr_path);
+	            	//printf("curr_path is %s\n",curr_path);
 	            	break;
 		    	}   
 	          }
@@ -628,7 +685,7 @@ int fs_rmdir(char** args, int argn) {
 	            		tmp_input = tmp_input + "/" + p_list[i];
 	            	}
 	            	strcpy(curr_path,tmp_input.c_str());
-	            	printf("curr_path is %s\n",curr_path);
+	            	//printf("curr_path is %s\n",curr_path);
 	            	break;
 		    	}   
 	          }
@@ -1112,6 +1169,10 @@ int check_built_in(Job *job)
 		return FALSE;
 	}
 	char **args = job->processList->args;
+	int argn = job->processList->argn;
+	int redir_flag = FALSE;
+	if(IsRightRedirection(args, argn) == TRUE)
+		redir_flag = TRUE;
 	if (args == NULL)
 	{
 		return FALSE;
@@ -1181,12 +1242,18 @@ int check_built_in(Job *job)
 	{
 	    return TRUE; // this needs to be changed
 	}
+	else if (redir_flag == TRUE) {
+	  return TRUE;
+	}
 	else
 		return FALSE;
 }
 
 int exeBuiltIn(char **args, int argn, sigset_t child_mask)
 {
+	int redir_flag = FALSE;
+  	if(IsRightRedirection(args, argn) == TRUE)
+    		redir_flag = TRUE;
 	if (strlen(curr_path) >= 128) {
 		char* temp = pwd(string(curr_path));
 		free(temp);
@@ -1273,6 +1340,10 @@ int exeBuiltIn(char **args, int argn, sigset_t child_mask)
 		f_unmount(args[1]);
 	    return TRUE; // this needs to be changed
 	}
+	else if (redir_flag == TRUE) {
+	  redirection(args,argn);
+          return TRUE;
+        }
 	else
 	{
 		perror("invalid input, check_built_in wrong probably\n");
