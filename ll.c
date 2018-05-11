@@ -5,8 +5,8 @@ int id;
 
 void jobInit()
 {
-	head = (Node*)malloc(sizeof(Node));
-	tail = (Node*)malloc(sizeof(Node));
+	head = (Node *)malloc(sizeof(Node));
+	tail = (Node *)malloc(sizeof(Node));
 	head->prev = NULL;
 	head->next = tail;
 	tail->prev = head;
@@ -18,14 +18,14 @@ void jobInit()
 
 Job *createJob(char *line, Process *process, int status, int field)
 {
-	Job *toReturn = (Job*) malloc(sizeof(Job));
+	Job *toReturn = (Job *)malloc(sizeof(Job));
 	toReturn->status = status;
 	toReturn->jobId = id;
 	toReturn->field = field;
 	id++;
 	if (line != NULL)
 	{
-		toReturn->line = (char*)malloc(sizeof(char) * strlen(line) + 1);
+		toReturn->line = (char *)malloc(sizeof(char) * strlen(line) + 1);
 		bzero(toReturn->line, strlen(line) + 1);
 		strcpy(toReturn->line, line);
 	}
@@ -100,7 +100,7 @@ Job *getJLastBackgrounded()
 
 int jobInsert(Job *job)
 {
-	Node *toAdd = (Node*)malloc(sizeof(Node));
+	Node *toAdd = (Node *)malloc(sizeof(Node));
 	if (!toAdd)
 	{
 		return FALSE;
@@ -127,7 +127,7 @@ int jobRemovePid(pid_t pid)
 			temp3->prev = temp2;
 			int i = temp->job->jobId;
 			// update all job id after the deleted one
-			while (temp3!= NULL && temp3->job != NULL)
+			while (temp3 != NULL && temp3->job != NULL)
 			{
 				if (temp3->job->jobId > i)
 				{

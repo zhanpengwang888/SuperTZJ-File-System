@@ -68,7 +68,7 @@ int parseCommands(char *line, char **command)
 	while (split != NULL)
 	{
 		len = strlen(split);
-		command[count] = (char*)malloc(len + 1);
+		command[count] = (char *)malloc(len + 1);
 		bzero(command[count], len + 1);
 		strcpy(command[count], split);
 		command[count][len] = '\0';
@@ -102,7 +102,7 @@ int parseSegments(char *command, char **segments)
 	if ((split = strtok(command, "|")) == NULL)
 	{
 		int llen = strlen(command);
-		segments[count] = (char*)malloc(llen + 1);
+		segments[count] = (char *)malloc(llen + 1);
 		bzero(segments[count], llen + 1);
 		strcpy(segments[count], command);
 		count = 1;
@@ -112,7 +112,7 @@ int parseSegments(char *command, char **segments)
 	while (split != NULL)
 	{
 		len = strlen(split);
-		segments[count] = (char*)malloc(len + 1);
+		segments[count] = (char *)malloc(len + 1);
 		bzero(segments[count], len + 1);
 		strcpy(segments[count], split);
 		segments[count][len] = '\0';
@@ -151,7 +151,7 @@ int parseArguments(char *segments, char **arguments)
 	while (split != NULL)
 	{
 		len = strlen(split);
-		arguments[count] = (char*)malloc(len + 1);
+		arguments[count] = (char *)malloc(len + 1);
 		bzero(arguments[count], len + 1);
 		strcpy(arguments[count], split);
 		arguments[count][len] = '\0';

@@ -7,201 +7,233 @@
 
 int last_backgrounded; // keep track of the last backgrounded job
 // built-in command: jobs
-char* add_space(char* ptr, size_t size) {
-	char* tmp = (char*)malloc(size);
-	strcpy(tmp,ptr);
+char *add_space(char *ptr, size_t size)
+{
+	char *tmp = (char *)malloc(size);
+	strcpy(tmp, ptr);
 	//printf("tmp is now %s, size is now %ld\n",tmp,size);
 	free(ptr);
 	return tmp;
 }
-int redirection(char** args, int argn) {
-  int file_desc;
-  //first parse the input, last one is the input file name
-  if (args[argn-1][0] != '/'){
-    char* tocheck = (char*) malloc(256);
-    strcpy(tocheck, curr_path);
-    strcat(tocheck, "/");
-    strcat(tocheck, args[argn-1]);
-    file_desc = f_open(string(tocheck), "w");
-    //check whether the path contains upper directory
-  }
-  else {
-    return f_open(string(args[argn-1]),"w");
-  }
-  string comb = "";
-  for(int i = 0; i < argn - 2; i++) {
-    comb += string(args[i]);
-    if(i != argn -3)
-      comb += " ";
-  }
-  char* content = (char*)(malloc(comb.length() + 1));
-  strcpy(content,comb.c_str());
-  //printf("the content we have is %s\n",content);
-  FILE* fp = popen(content,"r");
-  size_t b_size = 10000;
-  size_t counter = 0;
-  char* tmp_buffer = (char*)malloc(b_size);
-  char p;
-  if(fp==NULL){printf("popen err:%s\n",strerror(errno));exit(1);}
-  char* tmp_ptr = tmp_buffer;
-    //get the file size of fp
-  while((p=fgetc(fp))!=EOF){
-    sprintf(tmp_ptr,"%c",p);
-    if(counter >= b_size) {
-      b_size = b_size * 2;
-      tmp_buffer = add_space(tmp_buffer,b_size);
-      tmp_ptr = tmp_buffer + b_size/2;
-        }
-    tmp_ptr++;
-    counter++;
-  }
-  //printf("now we have %s\n",tmp_buffer);
-  pclose(fp);
-  int status = f_write(tmp_buffer,strlen(tmp_buffer)+1,1,file_desc);
-  if(status < 0) {
-    perror("fail\n");
-  }
-  f_close(file_desc);
-  return 0;
-}
-int fs_rm(char* file_path) {
-        //parse the file_name list  
-        if (file_path[0] != '/') {
-			char* tocheck = (char*) malloc(256);
-			strcpy(tocheck, curr_path);
-			strcat(tocheck, "/");
-			strcat(tocheck, file_path);
-			//check whether the path contains upper directory
-			return f_remove(string(tocheck));
+int redirection(char **args, int argn)
+{
+	int file_desc;
+	//first parse the input, last one is the input file name
+	if (args[argn - 1][0] != '/')
+	{
+		char *tocheck = (char *)malloc(256);
+		strcpy(tocheck, curr_path);
+		strcat(tocheck, "/");
+		strcat(tocheck, args[argn - 1]);
+		file_desc = f_open(string(tocheck), "w");
+		//check whether the path contains upper directory
+	}
+	else
+	{
+		return f_open(string(args[argn - 1]), "w");
+	}
+	string comb = "";
+	for (int i = 0; i < argn - 2; i++)
+	{
+		comb += string(args[i]);
+		if (i != argn - 3)
+			comb += " ";
+	}
+	char *content = (char *)(malloc(comb.length() + 1));
+	strcpy(content, comb.c_str());
+	//printf("the content we have is %s\n",content);
+	FILE *fp = popen(content, "r");
+	size_t b_size = 10000;
+	size_t counter = 0;
+	char *tmp_buffer = (char *)malloc(b_size);
+	char p;
+	if (fp == NULL)
+	{
+		printf("popen err:%s\n", strerror(errno));
+		exit(1);
+	}
+	char *tmp_ptr = tmp_buffer;
+	//get the file size of fp
+	while ((p = fgetc(fp)) != EOF)
+	{
+		sprintf(tmp_ptr, "%c", p);
+		if (counter >= b_size)
+		{
+			b_size = b_size * 2;
+			tmp_buffer = add_space(tmp_buffer, b_size);
+			tmp_ptr = tmp_buffer + b_size / 2;
 		}
-		else {
-			return f_rmdir(string(file_path));
-		}                                                                                                 
+		tmp_ptr++;
+		counter++;
+	}
+	//printf("now we have %s\n",tmp_buffer);
+	pclose(fp);
+	int status = f_write(tmp_buffer, strlen(tmp_buffer) + 1, 1, file_desc);
+	if (status < 0)
+	{
+		perror("fail\n");
+	}
+	f_close(file_desc);
+	return 0;
+}
+int fs_rm(char *file_path)
+{
+	//parse the file_name list
+	if (file_path[0] != '/')
+	{
+		char *tocheck = (char *)malloc(256);
+		strcpy(tocheck, curr_path);
+		strcat(tocheck, "/");
+		strcat(tocheck, file_path);
+		//check whether the path contains upper directory
+		return f_remove(string(tocheck));
+	}
+	else
+	{
+		return f_rmdir(string(file_path));
+	}
 }
 
-char* get_cur_file_path(char* cur_dir, char* cur_filename) {
-        char* cur_file_path = (char*)malloc(256);
-        strcpy(cur_file_path,cur_dir);
-        strcat(cur_file_path,"/");
-        strcat(cur_file_path,cur_filename);
-        //printf("cur_file is now %s\n",cur_file_path);
-        return cur_file_path;
+char *get_cur_file_path(char *cur_dir, char *cur_filename)
+{
+	char *cur_file_path = (char *)malloc(256);
+	strcpy(cur_file_path, cur_dir);
+	strcat(cur_file_path, "/");
+	strcat(cur_file_path, cur_filename);
+	//printf("cur_file is now %s\n",cur_file_path);
+	return cur_file_path;
 }
 
-//ls need to know the current directory path                                                                                           
-//readdir will return NULL if it is the end of directory                                                                               
-int fs_ls(char **args, int argn) {
-        //mode 1 is -F                                                                                                                 
-        //mode 2 is -l                                                                                                                 
-        int mode = 0;
-        if (argn != 2 && argn != 1) {
-                return FAIL;
-        }
-        if(argn == 2) {
-          if (strcmp(args[1], "-F") == 0) {
-            mode = 1;
-          }
-          else if (strcmp(args[1], "-l") == 0) {
-            mode = 2;
-          }
-        }
-        //printf("the mode is %d\n",mode);
-        int cur_dir = f_opendir(curr_path);
-        int cur_fd;
-        struct fileStat* f_status = (struct fileStat *)malloc(sizeof(fileStat));
-        if( cur_dir == -1) {
-                printf("there is something wrong with cur_dir, it is %s\n",curr_path);
-                //initalize cur_path and global_path                                                                                   
-        }
-        directory_entry* cur_entry;
-        while(1){
-                cur_entry = f_readdir(cur_dir);
-                //if(cur_entry != NULL)
-                  //printf("the file name is %s, inode is %d\n",cur_entry->file_name, cur_entry->inode_entry);
-                if(cur_entry == NULL) {
-                        //let the directory go back to the beginning                                                                   
-                        //f_seek(cur_dir,0,"SEEK_SET");                                                                                
-                        f_closedir(cur_dir);
-                        return TRUE;
-                }
-                if(mode == 1) {
-                        if(strcmp(cur_entry->file_name,".")== 0 || strcmp(cur_entry->file_name,"..") == 0) {
-                                printf("%s\n",cur_entry->file_name);
-                                continue;
-                        }
-                        char* cur_file = get_cur_file_path(curr_path,cur_entry->file_name);
-                        cur_fd = f_open(string(cur_file),"r");
-                        if(f_stat(cur_fd,f_status) < 0) {
-                                printf("there are some problems reading this file\n");
-                                continue;
-                        }
-                        if(f_status->type == DIRECTORY_FILE)
-                                printf("%s%s\n",cur_entry->file_name,"/");
-                        else if(f_status->permission == 1 || f_status->permission == 3 || f_status->permission == 5 || f_status->permi\
+//ls need to know the current directory path
+//readdir will return NULL if it is the end of directory
+int fs_ls(char **args, int argn)
+{
+	//mode 1 is -F
+	//mode 2 is -l
+	int mode = 0;
+	if (argn != 2 && argn != 1)
+	{
+		return FAIL;
+	}
+	if (argn == 2)
+	{
+		if (strcmp(args[1], "-F") == 0)
+		{
+			mode = 1;
+		}
+		else if (strcmp(args[1], "-l") == 0)
+		{
+			mode = 2;
+		}
+	}
+	//printf("the mode is %d\n",mode);
+	int cur_dir = f_opendir(curr_path);
+	int cur_fd;
+	struct fileStat *f_status = (struct fileStat *)malloc(sizeof(fileStat));
+	if (cur_dir == -1)
+	{
+		printf("there is something wrong with cur_dir, it is %s\n", curr_path);
+		//initalize cur_path and global_path
+	}
+	directory_entry *cur_entry;
+	while (1)
+	{
+		cur_entry = f_readdir(cur_dir);
+		//if(cur_entry != NULL)
+		//printf("the file name is %s, inode is %d\n",cur_entry->file_name, cur_entry->inode_entry);
+		if (cur_entry == NULL)
+		{
+			//let the directory go back to the beginning
+			//f_seek(cur_dir,0,"SEEK_SET");
+			f_closedir(cur_dir);
+			return TRUE;
+		}
+		if (mode == 1)
+		{
+			if (strcmp(cur_entry->file_name, ".") == 0 || strcmp(cur_entry->file_name, "..") == 0)
+			{
+				printf("%s\n", cur_entry->file_name);
+				continue;
+			}
+			char *cur_file = get_cur_file_path(curr_path, cur_entry->file_name);
+			cur_fd = f_open(string(cur_file), "r");
+			if (f_stat(cur_fd, f_status) < 0)
+			{
+				printf("there are some problems reading this file\n");
+				continue;
+			}
+			if (f_status->type == DIRECTORY_FILE)
+				printf("%s%s\n", cur_entry->file_name, "/");
+			else if (f_status->permission == 1 || f_status->permission == 3 || f_status->permission == 5 || f_status->permi\
 ssion == 7)
-                                printf("%s%s\n",cur_entry->file_name,"*");
-                        else
-                                printf("%s\n",cur_entry->file_name);
-                        free(cur_file);
-                        f_close(cur_fd);
-                }
-				else if(mode == 2) {
-                        if(strcmp(cur_entry->file_name,".")== 0 || strcmp(cur_entry->file_name,"..") == 0) {
-                                continue;
-                        }
-                        char* cur_file = get_cur_file_path(curr_path,cur_entry->file_name);
-                        cur_fd = f_open(string(cur_file),"r");
-                        if(f_stat(cur_fd,f_status) < 0) {
-                                printf("there are some problems reading this file\n");
-                                continue;
-                        }
-                        char* p_char = (char*)(malloc(4));
-                        switch(f_status->permission) {
-                                case 1:
-                                        strcpy(p_char,"--x");
-                                        break;
-                                case 2:
-                                        strcpy(p_char,"-w-");
-                                        break;
-                                case 3:
-                                        strcpy(p_char,"-wx");
-                                        break;
-                                case 4:
-                                        strcpy(p_char,"r--");
-                                        break;
-                                case 5:
-                                        strcpy(p_char,"r-x");
-                                        break;
-				case 6:
-					strcpy(p_char,"rw-");
-					break;
-                                case 7:
-                                        strcpy(p_char,"xrw");
-					break;
- 						}
-                        char type;
-                        if(f_status->type == DIRECTORY_FILE)
-                                type = 'd';
-                        else
-                                type = '-';
-                        printf("%c%s   %d   %d    %d    %s\n",type,p_char,f_status->uid,f_status->gid,f_status->filesize, cur_entry->f\
+				printf("%s%s\n", cur_entry->file_name, "*");
+			else
+				printf("%s\n", cur_entry->file_name);
+			free(cur_file);
+			f_close(cur_fd);
+		}
+		else if (mode == 2)
+		{
+			if (strcmp(cur_entry->file_name, ".") == 0 || strcmp(cur_entry->file_name, "..") == 0)
+			{
+				continue;
+			}
+			char *cur_file = get_cur_file_path(curr_path, cur_entry->file_name);
+			cur_fd = f_open(string(cur_file), "r");
+			if (f_stat(cur_fd, f_status) < 0)
+			{
+				printf("there are some problems reading this file\n");
+				continue;
+			}
+			char *p_char = (char *)(malloc(4));
+			switch (f_status->permission)
+			{
+			case 1:
+				strcpy(p_char, "--x");
+				break;
+			case 2:
+				strcpy(p_char, "-w-");
+				break;
+			case 3:
+				strcpy(p_char, "-wx");
+				break;
+			case 4:
+				strcpy(p_char, "r--");
+				break;
+			case 5:
+				strcpy(p_char, "r-x");
+				break;
+			case 6:
+				strcpy(p_char, "rw-");
+				break;
+			case 7:
+				strcpy(p_char, "xrw");
+				break;
+			}
+			char type;
+			if (f_status->type == DIRECTORY_FILE)
+				type = 'd';
+			else
+				type = '-';
+			printf("%c%s   %d   %d    %d    %s\n", type, p_char, f_status->uid, f_status->gid, f_status->filesize, cur_entry->f\
 ile_name);
-                        free(cur_file);
-                        free(p_char);
-                        f_close(cur_fd);
-                }
+			free(cur_file);
+			free(p_char);
+			f_close(cur_fd);
+		}
 
-                //deal with deafult mode                                                                                               
-                else {
-                        if(strcmp(cur_entry->file_name,".")== 0 || strcmp(cur_entry->file_name,"..") == 0) {
-                                continue;
-                        }
-                        printf("%s\n",cur_entry->file_name);
-                }
-        }
-        return TRUE;
+		//deal with deafult mode
+		else
+		{
+			if (strcmp(cur_entry->file_name, ".") == 0 || strcmp(cur_entry->file_name, "..") == 0)
+			{
+				continue;
+			}
+			printf("%s\n", cur_entry->file_name);
+		}
+	}
+	return TRUE;
 }
-
 
 void bJobs()
 {
@@ -433,7 +465,8 @@ void bFg(char **args, int argn, sigset_t child_mask)
 	current_job->field = JOBFORE; //-- How do I know it is from stopped job or newly created job? how to keep track
 	current_job->status = JOBRUN;
 	pid_t current_pgid = -1 * current_job->pgid;
-	if (kill(current_pgid, SIGCONT) < 0) {
+	if (kill(current_pgid, SIGCONT) < 0)
+	{
 		perror("kill (SIGCONT)"); // send sigcont to all processes of that process group
 		return;
 	}
@@ -548,42 +581,50 @@ void bFg(char **args, int argn, sigset_t child_mask)
 // 	}
 // }
 
-
-int fs_cd(char **args, int argn) {
-	if (argn != 2) {
+int fs_cd(char **args, int argn)
+{
+	if (argn != 2)
+	{
 		return FAIL;
 	}
-	else if (strcmp(args[0], "cd") != 0) {
+	else if (strcmp(args[0], "cd") != 0)
+	{
 		return FAIL;
 	}
 	int fd = -1;
-	char *tocheck = (char *) malloc(strlen(args[1]) + strlen(curr_path) + 1);
+	char *tocheck = (char *)malloc(strlen(args[1]) + strlen(curr_path) + 1);
 	bzero(tocheck, strlen(args[1]) + strlen(curr_path) + 1);
 	// check whether is an absolute path
-	if (args[1][0] == '/') {
+	if (args[1][0] == '/')
+	{
 		free(tocheck);
 		tocheck = NULL;
 		fd = f_opendir(string(args[1]));
-		if (fd < 0) {
+		if (fd < 0)
+		{
 			return FAIL;
 		}
-		else {
+		else
+		{
 			f_closedir(fd);
 			bzero(curr_path, 256);
 			strcpy(curr_path, args[1]);
 			return SUCCESS;
 		}
 	}
-	else {
+	else
+	{
 		strcpy(tocheck, curr_path);
 		strcat(tocheck, "/");
 		strcat(tocheck, args[1]);
 		fd = f_opendir(string(tocheck));
-		if (fd < 0) {
+		if (fd < 0)
+		{
 			free(tocheck);
 			return FAIL;
 		}
-		else {
+		else
+		{
 			f_closedir(fd);
 			bzero(curr_path, 256);
 			strcpy(curr_path, tocheck);
@@ -593,31 +634,37 @@ int fs_cd(char **args, int argn) {
 	}
 }
 
-void fs_pwd() {
-	char* temp = (char*)malloc(256);
+void fs_pwd()
+{
+	char *temp = (char *)malloc(256);
 	strcpy(temp, curr_path);
 	free(curr_path);
 	curr_path = pwd(string(temp));
 	free(temp);
-	if (curr_path == NULL) {
+	if (curr_path == NULL)
+	{
 		return;
 	}
 	printf("%s\n", curr_path);
 }
 
-int fs_chmod(char **args, int argn) {
-	if (argn != 3) {
+int fs_chmod(char **args, int argn)
+{
+	if (argn != 3)
+	{
 		return FAIL;
 	}
-	else if (atoi(args[1]) == 0 && strcmp(args[1], "0") != 0) {
+	else if (atoi(args[1]) == 0 && strcmp(args[1], "0") != 0)
+	{
 		return FAIL;
 	}
-	else if (strcmp(args[0], "chmod") != 0) {
+	else if (strcmp(args[0], "chmod") != 0)
+	{
 		return FAIL;
 	}
 	if (args[2][0] != '/')
-       	{
-		char* tocheck = (char*) malloc(256);
+	{
+		char *tocheck = (char *)malloc(256);
 		strcpy(tocheck, curr_path);
 		strcat(tocheck, "/");
 		strcat(tocheck, args[2]);
@@ -627,19 +674,22 @@ int fs_chmod(char **args, int argn) {
 	return change_mode(atoi(args[1]), string(args[2]));
 }
 
+int fs_mkdir(char **args, int argn)
+{
+	if (argn != 3)
+	{
+		return FAIL;
+	}
+	else if (atoi(args[1]) == 0 && strcmp(args[1], "0") != 0)
+	{
+		return FAIL;
+	}
+	else
+	{
 
-int fs_mkdir(char** args, int argn) {
-	if (argn != 3) {
-		return FAIL;
-	}
-	else if (atoi(args[1]) == 0 && strcmp(args[1], "0") != 0) {
-		return FAIL;
-	}
-	else {
-		
-		if (args[2][0] != '/') 
+		if (args[2][0] != '/')
 		{
-			char* tocheck = (char*) malloc(256);
+			char *tocheck = (char *)malloc(256);
 			strcpy(tocheck, curr_path);
 			strcat(tocheck, "/");
 			strcat(tocheck, args[2]);
@@ -649,75 +699,89 @@ int fs_mkdir(char** args, int argn) {
 	}
 }
 
-int fs_rmdir(char** args, int argn) {
-	if (argn != 2) {
+int fs_rmdir(char **args, int argn)
+{
+	if (argn != 2)
+	{
 		return FAIL;
 	}
-	else {
-		if (args[1][0] != '/') {
-			char* tocheck = (char*) malloc(256);
+	else
+	{
+		if (args[1][0] != '/')
+		{
+			char *tocheck = (char *)malloc(256);
 			strcpy(tocheck, curr_path);
 			strcat(tocheck, "/");
 			strcat(tocheck, args[1]);
 			//check whether the path contains upper directory
-			vector<string>f_path = split(string(tocheck),'/');
-            vector<string>p_list = split(string(curr_path),'/');
-            string f_name = f_path[f_path.size()-1];
-	          for(int j = 0; j < p_list.size() ; j++) {
-	            if(p_list[j] == f_name){
-	            	bzero(curr_path,MAX_LEN);
-	            	string tmp_input = "";
-	            	for(int i = 0; i < j; i ++) {
-	            		tmp_input = tmp_input + "/" + p_list[i];
-	            	}
-	            	strcpy(curr_path,tmp_input.c_str());
-	            	//printf("curr_path is %s\n",curr_path);
-	            	break;
-		    	}   
-	          }
+			vector<string> f_path = split(string(tocheck), '/');
+			vector<string> p_list = split(string(curr_path), '/');
+			string f_name = f_path[f_path.size() - 1];
+			for (int j = 0; j < p_list.size(); j++)
+			{
+				if (p_list[j] == f_name)
+				{
+					bzero(curr_path, MAX_LEN);
+					string tmp_input = "";
+					for (int i = 0; i < j; i++)
+					{
+						tmp_input = tmp_input + "/" + p_list[i];
+					}
+					strcpy(curr_path, tmp_input.c_str());
+					//printf("curr_path is %s\n",curr_path);
+					break;
+				}
+			}
 			return f_rmdir(string(tocheck));
 		}
-		else {
-			vector<string>f_path = split(string(args[1]),'/');
-            vector<string>p_list = split(string(curr_path),'/');
-            string f_name = f_path[f_path.size()-1];
-	          for(int j = 0; j < p_list.size() ; j++) {
-	            if(p_list[j] == f_name){
-	            	bzero(curr_path,MAX_LEN);
-	            	string tmp_input = "";
-	            	for(int i = 0; i < j; i ++) {
-	            		tmp_input = tmp_input + "/" + p_list[i];
-	            	}
-	            	strcpy(curr_path,tmp_input.c_str());
-	            	//printf("curr_path is %s\n",curr_path);
-	            	break;
-		    	}   
-	          }
+		else
+		{
+			vector<string> f_path = split(string(args[1]), '/');
+			vector<string> p_list = split(string(curr_path), '/');
+			string f_name = f_path[f_path.size() - 1];
+			for (int j = 0; j < p_list.size(); j++)
+			{
+				if (p_list[j] == f_name)
+				{
+					bzero(curr_path, MAX_LEN);
+					string tmp_input = "";
+					for (int i = 0; i < j; i++)
+					{
+						tmp_input = tmp_input + "/" + p_list[i];
+					}
+					strcpy(curr_path, tmp_input.c_str());
+					//printf("curr_path is %s\n",curr_path);
+					break;
+				}
+			}
 			return f_rmdir(string(args[1]));
 		}
 	}
 }
 
-
-int fs_mount(char** args, int argn) {
-	if (argn != 2) {
+int fs_mount(char **args, int argn)
+{
+	if (argn != 2)
+	{
 		return FAIL;
 	}
-	else {
-		return f_mount("/", args[1]); 
+	else
+	{
+		return f_mount("/", args[1]);
 	}
 }
 
-int fs_unmount(char** args, int argn) {
-	if (argn != 2) {
+int fs_unmount(char **args, int argn)
+{
+	if (argn != 2)
+	{
 		return FAIL;
 	}
-	else {
-		return f_unmount(args[1]); 
+	else
+	{
+		return f_unmount(args[1]);
 	}
 }
-
-
 
 // could be "bg %        number" or "bg %number"
 void bBg(char **args, int argn)
@@ -776,9 +840,11 @@ void bBg(char **args, int argn)
 // cat built-in command implementation starts here
 // Tested and Robust
 
-string conversion(char **arg, int size) {
+string conversion(char **arg, int size)
+{
 	string temp = "";
-	for (int i = 1; i < size; i++) {
+	for (int i = 1; i < size; i++)
+	{
 		temp = temp + " " + arg[i];
 	}
 	return temp;
@@ -787,53 +853,53 @@ string conversion(char **arg, int size) {
 // get the keyboard input from stdin and write it into a file.
 void microcat_stdin(int file_descriptor_to_be_written)
 {
-  int wr;
-  char buf[1];
-  while (read(0, buf, sizeof buf) > 0)
-  {
-    wr = f_write(buf, sizeof(buf), 1, file_descriptor_to_be_written);
-	//write(file_descriptor_to_be_written, buf, sizeof buf);
-    if (wr < 0)
-    {
-		printf("[microcat_stdin] Fails\n");
-		break;
-    }
-  }
+	int wr;
+	char buf[1];
+	while (read(0, buf, sizeof buf) > 0)
+	{
+		wr = f_write(buf, sizeof(buf), 1, file_descriptor_to_be_written);
+		//write(file_descriptor_to_be_written, buf, sizeof buf);
+		if (wr < 0)
+		{
+			printf("[microcat_stdin] Fails\n");
+			break;
+		}
+	}
 }
 
 // get the keyboard input from stdin and write it into a file.
 // syscall version
 void microcat_stdin_using_syscall(int file_descriptor_to_be_written)
 {
-  int wr;
-  char buf[1];
-  while (read(0, buf, sizeof buf) > 0)
-  {
-    wr = write(file_descriptor_to_be_written, buf, sizeof buf);
-    if (wr < 0)
-    {
-		printf("[microcat_stdin] Fails\n");
-		break;
-    }
-  }
+	int wr;
+	char buf[1];
+	while (read(0, buf, sizeof buf) > 0)
+	{
+		wr = write(file_descriptor_to_be_written, buf, sizeof buf);
+		if (wr < 0)
+		{
+			printf("[microcat_stdin] Fails\n");
+			break;
+		}
+	}
 }
 
 // check if there is a redirection '>' or ">>" or '<' in the give arguments
 // check if the command only has > redirection.
 int only_right_redirection(char **arg, int size)
 {
-  for (int i = 1; i < size; i++)
-  {
-    if (*arg[i] == '<')
-      return FALSE;
-  }
-  return TRUE;
+	for (int i = 1; i < size; i++)
+	{
+		if (*arg[i] == '<')
+			return FALSE;
+	}
+	return TRUE;
 }
 
 // check if it is the right redirection ">"
 int IsRightRedirection(char **arg, int size)
 {
-	if(!only_right_redirection(arg, size))
+	if (!only_right_redirection(arg, size))
 		return FALSE;
 	string command = string(conversion(arg, size));
 	vector<string> command_string_list = split(command, '>'); // split it by '>'
@@ -845,18 +911,18 @@ int IsRightRedirection(char **arg, int size)
 // check if the command only has < redirection.
 int only_left_redirection(char **arg, int size)
 {
-  for (int i = 1; i < size; i++)
-  {
-    if (*arg[i] == '>')
-      return FALSE;
-  }
-  return TRUE;
+	for (int i = 1; i < size; i++)
+	{
+		if (*arg[i] == '>')
+			return FALSE;
+	}
+	return TRUE;
 }
 
 // check if it is the left redirection "<"
 int IsLeftRedirection(char **arg, int size)
 {
-	if(!only_left_redirection(arg, size))
+	if (!only_left_redirection(arg, size))
 		return FALSE;
 	string command = string(conversion(arg, size));
 	vector<string> command_string_list = split(command, '<'); // split it by '>'
@@ -866,15 +932,17 @@ int IsLeftRedirection(char **arg, int size)
 }
 
 // check if the command is double redirection
-int doubleRedirection(char **arg, int size) {
-  //string command = string(conversion(arg, size));
-  //	vector<string> command_string_list = split(command, '>'); // split it by ">>"
-  //	if (command_string_list[command_string_list.size()-1][0] == '>')
-  //		return TRUE;
-  //	return FALSE;
-	for (int i = 0; i < size; i++) {
-	  if (string(arg[i]) == ">>")
-	    return TRUE;
+int doubleRedirection(char **arg, int size)
+{
+	//string command = string(conversion(arg, size));
+	//	vector<string> command_string_list = split(command, '>'); // split it by ">>"
+	//	if (command_string_list[command_string_list.size()-1][0] == '>')
+	//		return TRUE;
+	//	return FALSE;
+	for (int i = 0; i < size; i++)
+	{
+		if (string(arg[i]) == ">>")
+			return TRUE;
 	}
 	return FALSE;
 }
@@ -882,114 +950,116 @@ int doubleRedirection(char **arg, int size) {
 // our fs version
 void microcat(const string file_name, int file_descriptor_to_be_written)
 {
-  int fd, wr, rd;
-  fd = f_open(string(file_name), "r");
-  //(file_name, O_RDONLY);
+	int fd, wr, rd;
+	fd = f_open(string(file_name), "r");
+	//(file_name, O_RDONLY);
 
-  // error checking and handling
-  if (fd < 0 || open_file_table[fd]->inode_entry == -1)
-  {
-	cout << "[cat] No such file or directory" << endl;
-    //char error[] = "No such file or directory.\n";
-    //write(1, error, sizeof error);
-    //exit(EXIT_FAILURE);
-	  return;
-  }
+	// error checking and handling
+	if (fd < 0 || open_file_table[fd]->inode_entry == -1)
+	{
+		cout << "[cat] No such file or directory" << endl;
+		//char error[] = "No such file or directory.\n";
+		//write(1, error, sizeof error);
+		//exit(EXIT_FAILURE);
+		return;
+	}
 
-  int size_of_file = get_file_size(fd);
-  char buffer[size_of_file + 1];
-  bzero(buffer, size_of_file + 1);
-  
-  // read and write
-  //rd = read(fd, buffer, size_of_file);
-  rd = f_read(buffer, size_of_file, 1, fd);
-  if (rd < 0)
-  { // read into buffer
-	cout << "[cat] Something is wrong!" << endl;
-    //char err[] = "Something is wrong!\n";
-    //write(1, err, sizeof err);
-    //exit(EXIT_FAILURE);
-	  return;
-  }
-  buffer[size_of_file + 1] = '\n';
-  //wr = write(file_descriptor_to_be_written, buffer, size_of_file);
-  wr = f_write(buffer, size_of_file, 1, file_descriptor_to_be_written);
-  if (wr < 0)
-  {
-    // write from buffer to the stdout.
-    cout << "[cat]Something goes wrong!" << endl;
-	//char err[] = "Something is wrong!\n";
-    //write(1, err, sizeof err);
-    //exit(EXIT_FAILURE);
-	  return;
-  }
-  if (f_close(fd) < 0)
-  {
-    //char error[] = "Can't close the file!";
-    //write(1, error, sizeof error);
-    cout << "[cat] Fail to close the file" << endl;
-	//exit(EXIT_FAILURE);
-	  return;
-  }
+	int size_of_file = get_file_size(fd);
+	char buffer[size_of_file + 1];
+	bzero(buffer, size_of_file + 1);
+
+	// read and write
+	//rd = read(fd, buffer, size_of_file);
+	rd = f_read(buffer, size_of_file, 1, fd);
+	if (rd < 0)
+	{ // read into buffer
+		cout << "[cat] Something is wrong!" << endl;
+		//char err[] = "Something is wrong!\n";
+		//write(1, err, sizeof err);
+		//exit(EXIT_FAILURE);
+		return;
+	}
+	buffer[size_of_file + 1] = '\n';
+	//wr = write(file_descriptor_to_be_written, buffer, size_of_file);
+	wr = f_write(buffer, size_of_file, 1, file_descriptor_to_be_written);
+	if (wr < 0)
+	{
+		// write from buffer to the stdout.
+		cout << "[cat]Something goes wrong!" << endl;
+		//char err[] = "Something is wrong!\n";
+		//write(1, err, sizeof err);
+		//exit(EXIT_FAILURE);
+		return;
+	}
+	if (f_close(fd) < 0)
+	{
+		//char error[] = "Can't close the file!";
+		//write(1, error, sizeof error);
+		cout << "[cat] Fail to close the file" << endl;
+		//exit(EXIT_FAILURE);
+		return;
+	}
 }
 
 // syscall verison
 void microcat_using_syscall(const string file_name, int file_descriptor_to_be_written)
 {
-  int fd, wr, rd;
-  fd = f_open(string(file_name), "r");
-  //(file_name, O_RDONLY);
+	int fd, wr, rd;
+	fd = f_open(string(file_name), "r");
+	//(file_name, O_RDONLY);
 
-  // error checking and handling
-  if (fd < 0 || open_file_table[fd]->inode_entry == -1)
-  {
-	cout << "[cat] No such file or directory" << endl;
-    //char error[] = "No such file or directory.\n";
-    //write(1, error, sizeof error);
-    //exit(EXIT_FAILURE);
-	  return;
-  }
-  int size_of_file = get_file_size(fd);
-  char buffer[size_of_file + 1];
-  bzero(buffer, size_of_file + 1);
-  
-  // read and write
-  //rd = read(fd, buffer, size_of_file);
-  rd = f_read(buffer, size_of_file, 1, fd);
-  if (rd < 0)
-  { // read into buffer
-	cout << "[cat] Something is wrong!" << endl;
-    //char err[] = "Something is wrong!\n";
-    //write(1, err, sizeof err);
-    //exit(EXIT_FAILURE);
-	  return;
-  }
-  buffer[size_of_file + 1] = '\n';
-  wr = write(file_descriptor_to_be_written, buffer, size_of_file);
-  if (wr < 0)
-  {
-    // write from buffer to the stdout.
-    cout << "[cat]Something goes wrong!" << endl;
-	//char err[] = "Something is wrong!\n";
-    //write(1, err, sizeof err);
-    //exit(EXIT_FAILURE);
-	  return;
-  }
-  if (f_close(fd) < 0)
-  {
-    //char error[] = "Can't close the file!";
-    //write(1, error, sizeof error);
-    cout << "[cat] Fail to close the file" << endl;
-	//exit(EXIT_FAILURE);
-	  return;
-  }
+	// error checking and handling
+	if (fd < 0 || open_file_table[fd]->inode_entry == -1)
+	{
+		cout << "[cat] No such file or directory" << endl;
+		//char error[] = "No such file or directory.\n";
+		//write(1, error, sizeof error);
+		//exit(EXIT_FAILURE);
+		return;
+	}
+	int size_of_file = get_file_size(fd);
+	char buffer[size_of_file + 1];
+	bzero(buffer, size_of_file + 1);
+
+	// read and write
+	//rd = read(fd, buffer, size_of_file);
+	rd = f_read(buffer, size_of_file, 1, fd);
+	if (rd < 0)
+	{ // read into buffer
+		cout << "[cat] Something is wrong!" << endl;
+		//char err[] = "Something is wrong!\n";
+		//write(1, err, sizeof err);
+		//exit(EXIT_FAILURE);
+		return;
+	}
+	buffer[size_of_file + 1] = '\n';
+	wr = write(file_descriptor_to_be_written, buffer, size_of_file);
+	if (wr < 0)
+	{
+		// write from buffer to the stdout.
+		cout << "[cat]Something goes wrong!" << endl;
+		//char err[] = "Something is wrong!\n";
+		//write(1, err, sizeof err);
+		//exit(EXIT_FAILURE);
+		return;
+	}
+	if (f_close(fd) < 0)
+	{
+		//char error[] = "Can't close the file!";
+		//write(1, error, sizeof error);
+		cout << "[cat] Fail to close the file" << endl;
+		//exit(EXIT_FAILURE);
+		return;
+	}
 }
 
-int microcat_calling(char **args, int argn) {
+int microcat_calling(char **args, int argn)
+{
 	// the case when there is no file input
 	int standard_output = 1;
 	int fd;
-	if (argn == 1) {
+	if (argn == 1)
+	{
 		microcat_stdin_using_syscall(standard_output);
 		return SUCCESS;
 	}
@@ -998,65 +1068,29 @@ int microcat_calling(char **args, int argn) {
 	{
 		if (doubleRedirection(args, argn))
 		{
-		  if (argn == 3) {
-                          string temp_file_path = string(curr_path) + "/" + string(args[argn - 1]);
-                          fd = f_open(temp_file_path, "w");
-                          microcat_stdin(fd);
-                          f_close(fd);
-			  return SUCCESS;
-                        }
-		  else if (strncmp(args[i], ">>", sizeof(">>")) != 0 && i != 1 && i != (argn - 1))
+			if (argn == 3)
 			{
-				// I assume that the txt file to be written into is to the right of '>'
-				//fd = f_open(args[argn - 1], "a");
-			  string temp_file_path = string(curr_path) + "/" + string(args[argn - 1]);
-				fd = f_open(temp_file_path, "a");
-				//fd = open(argv[argc - 1], O_RDWR | O_CREAT | O_APPEND, 0666);
-				if (*args[i] == '-') {
-					microcat_stdin(fd);
-					f_close(fd);
-				}
-				else {
-				  temp_file_path = string(curr_path) + "/" + string(args[i]);
-					microcat(temp_file_path, fd);
-					f_close(fd);
-				}
-			} else if (i == 1) {
-				// delete all the content of the txt file that needs to be overwritten.
-				//fd = open(argv[argc - 1], O_RDWR | O_CREAT | O_TRUNC, 0666);
-			  string temp_file_path = string(curr_path) + "/" + string(args[argn - 1]);
-				fd = f_open(temp_file_path, "a");
-				temp_file_path = string(curr_path) + "/" + string(args[i]);
-				microcat(temp_file_path, fd);
-				f_close(fd);
-			}
-		}
-		else if (IsRightRedirection(args, argn))
-		{
-			if (*args[i] == '-') {
-			  string temp_file_path = string(curr_path) + "/" + string(args[argn - 1]);
+				string temp_file_path = string(curr_path) + "/" + string(args[argn - 1]);
 				fd = f_open(temp_file_path, "w");
 				microcat_stdin(fd);
 				f_close(fd);
-			} else if (argn == 3) {
-			  string temp_file_path = string(curr_path) + "/" + string(args[argn - 1]);
-			  fd = f_open(temp_file_path, "w");
-			  microcat_stdin(fd);
-			  f_close(fd);
-			  return SUCCESS;
+				return SUCCESS;
 			}
-			else if (*args[i] != '>' && i != 1 && i != (argn - 1))
+			else if (strncmp(args[i], ">>", sizeof(">>")) != 0 && i != 1 && i != (argn - 1))
 			{
 				// I assume that the txt file to be written into is to the right of '>'
-			  string temp_file_path = string(curr_path) + "/" + string(args[argn - 1]);
+				//fd = f_open(args[argn - 1], "a");
+				string temp_file_path = string(curr_path) + "/" + string(args[argn - 1]);
 				fd = f_open(temp_file_path, "a");
 				//fd = open(argv[argc - 1], O_RDWR | O_CREAT | O_APPEND, 0666);
-				if (*args[i] == '-') {
+				if (*args[i] == '-')
+				{
 					microcat_stdin(fd);
 					f_close(fd);
 				}
-				else {
-				  temp_file_path = string(curr_path) + "/" + string(args[i]);
+				else
+				{
+					temp_file_path = string(curr_path) + "/" + string(args[i]);
 					microcat(temp_file_path, fd);
 					f_close(fd);
 				}
@@ -1065,24 +1099,76 @@ int microcat_calling(char **args, int argn) {
 			{
 				// delete all the content of the txt file that needs to be overwritten.
 				//fd = open(argv[argc - 1], O_RDWR | O_CREAT | O_TRUNC, 0666);
-			  string temp_file_path = string(curr_path) + "/" + string(args[argn - 1]);
+				string temp_file_path = string(curr_path) + "/" + string(args[argn - 1]);
+				fd = f_open(temp_file_path, "a");
+				temp_file_path = string(curr_path) + "/" + string(args[i]);
+				microcat(temp_file_path, fd);
+				f_close(fd);
+			}
+		}
+		else if (IsRightRedirection(args, argn))
+		{
+			if (*args[i] == '-')
+			{
+				string temp_file_path = string(curr_path) + "/" + string(args[argn - 1]);
+				fd = f_open(temp_file_path, "w");
+				microcat_stdin(fd);
+				f_close(fd);
+			}
+			else if (argn == 3)
+			{
+				string temp_file_path = string(curr_path) + "/" + string(args[argn - 1]);
+				fd = f_open(temp_file_path, "w");
+				microcat_stdin(fd);
+				f_close(fd);
+				return SUCCESS;
+			}
+			else if (*args[i] != '>' && i != 1 && i != (argn - 1))
+			{
+				// I assume that the txt file to be written into is to the right of '>'
+				string temp_file_path = string(curr_path) + "/" + string(args[argn - 1]);
+				fd = f_open(temp_file_path, "a");
+				//fd = open(argv[argc - 1], O_RDWR | O_CREAT | O_APPEND, 0666);
+				if (*args[i] == '-')
+				{
+					microcat_stdin(fd);
+					f_close(fd);
+				}
+				else
+				{
+					temp_file_path = string(curr_path) + "/" + string(args[i]);
+					microcat(temp_file_path, fd);
+					f_close(fd);
+				}
+			}
+			else if (i == 1)
+			{
+				// delete all the content of the txt file that needs to be overwritten.
+				//fd = open(argv[argc - 1], O_RDWR | O_CREAT | O_TRUNC, 0666);
+				string temp_file_path = string(curr_path) + "/" + string(args[argn - 1]);
 				fd = f_open(temp_file_path, "w");
 				temp_file_path = string(curr_path) + "/" + string(args[i]);
 				microcat(temp_file_path, fd);
 				f_close(fd);
 			}
-		} else if (IsLeftRedirection(args, argn)) {
-		  if (*args[i] != '<') {
-		  string temp_file_path = string(curr_path) + "/" + string(args[argn - 1]);
-			microcat_using_syscall(temp_file_path, standard_output);
-			return SUCCESS;
-		  }
-		} else {
+		}
+		else if (IsLeftRedirection(args, argn))
+		{
+			if (*args[i] != '<')
+			{
+				string temp_file_path = string(curr_path) + "/" + string(args[argn - 1]);
+				microcat_using_syscall(temp_file_path, standard_output);
+				return SUCCESS;
+			}
+		}
+		else
+		{
 			// microcat all the text files if there is no redirection symbol.
 			if (*args[i] == '-')
 				microcat_stdin_using_syscall(standard_output);
-			else {
-			  string temp_file_path = string(curr_path) + "/" + string(args[i]);
+			else
+			{
+				string temp_file_path = string(curr_path) + "/" + string(args[i]);
 				microcat_using_syscall(temp_file_path, standard_output);
 			}
 		}
@@ -1092,9 +1178,10 @@ int microcat_calling(char **args, int argn) {
 
 // cat command implementation ends here
 
-// more built-in command implementation starts here                                                                                                                             
-int more(string filename) {
-  int fd = f_open(string(filename), "r");
+// more built-in command implementation starts here
+int more(string filename)
+{
+	int fd = f_open(string(filename), "r");
 	// error checking and handling
 	if (fd < 0 || open_file_table[fd]->inode_entry == -1)
 	{
@@ -1119,53 +1206,59 @@ int more(string filename) {
 		return FAIL;
 	}
 	buffer[size_of_file + 1] = '\n';
-	char * bu = buffer;
+	char *bu = buffer;
 	// get the windown size of the terminal
 	struct winsize win;
 	int returned_num = ioctl(STDOUT_FILENO, TIOCGWINSZ, &win);
-	if (returned_num == FAIL) {
+	if (returned_num == FAIL)
+	{
 		perror("iotcl");
 		return FAIL;
 	}
 	int row = win.ws_row - 1;
 	int col = win.ws_col;
-			for(int i = 0; i < sizeof(buffer); i++) {
-			putchar(*bu);
-			switch(buffer[i]) {
-				case '\n':
-					row --;
-					col = win.ws_col;
-					break;
-				default:
-					col --;
-					if (col == 0) {
-						row --;
-						col = win.ws_col;
-					}
+	for (int i = 0; i < sizeof(buffer); i++)
+	{
+		putchar(*bu);
+		switch (buffer[i])
+		{
+		case '\n':
+			row--;
+			col = win.ws_col;
+			break;
+		default:
+			col--;
+			if (col == 0)
+			{
+				row--;
+				col = win.ws_col;
 			}
-			if (row == 1) {
-				printf("----MORE----");
-				sleep(3);
-				printf("\r");
-				for (int j = 0; j < win.ws_col; i++)
-					printf(" ");
-				row = 2;
-			}
-			bu ++;
 		}
-			f_close(fd);
+		if (row == 1)
+		{
+			printf("----MORE----");
+			sleep(3);
+			printf("\r");
+			for (int j = 0; j < win.ws_col; i++)
+				printf(" ");
+			row = 2;
+		}
+		bu++;
+	}
+	f_close(fd);
 	return SUCCESS;
 }
 
-void more_calling(char **arg, int argn) {
-	for(int i = 1; i < argn; i++) {
-	  string temp = string(curr_path) + "/" + string(arg[i]);
-	  more(temp);
+void more_calling(char **arg, int argn)
+{
+	for (int i = 1; i < argn; i++)
+	{
+		string temp = string(curr_path) + "/" + string(arg[i]);
+		more(temp);
 	}
 }
 
-// more built-in command implementation ends here   
-
+// more built-in command implementation ends here
 
 int check_built_in(Job *job)
 {
@@ -1176,7 +1269,7 @@ int check_built_in(Job *job)
 	char **args = job->processList->args;
 	int argn = job->processList->argn;
 	int redir_flag = FALSE;
-	if(IsRightRedirection(args, argn) == TRUE)
+	if (IsRightRedirection(args, argn) == TRUE)
 		redir_flag = TRUE;
 	if (args == NULL)
 	{
@@ -1205,50 +1298,51 @@ int check_built_in(Job *job)
 	// Homework 7 additional built-in commands
 	else if (strcmp(args[0], "ls") == 0)
 	{
-	    return TRUE; // this needs to be changed
+		return TRUE; // this needs to be changed
 	}
 	else if (strcmp(args[0], "chmod") == 0)
 	{
-	    return TRUE; // this needs to be changed
+		return TRUE; // this needs to be changed
 	}
 	else if (strcmp(args[0], "mkdir") == 0)
 	{
-	    return TRUE; // this needs to be changed
+		return TRUE; // this needs to be changed
 	}
 	else if (strcmp(args[0], "rmdir") == 0)
 	{
-	    return TRUE; // this needs to be changed
+		return TRUE; // this needs to be changed
 	}
 	else if (strcmp(args[0], "cd") == 0)
 	{
-	    return TRUE; // this needs to be changed
+		return TRUE; // this needs to be changed
 	}
 	else if (strcmp(args[0], "pwd") == 0)
 	{
-	    return TRUE; // this needs to be changed
+		return TRUE; // this needs to be changed
 	}
 	else if (strcmp(args[0], "cat") == 0)
 	{
-	    return TRUE; // this needs to be changed
+		return TRUE; // this needs to be changed
 	}
 	else if (strcmp(args[0], "more") == 0)
 	{
-	    return TRUE; // this needs to be changed
+		return TRUE; // this needs to be changed
 	}
 	else if (strcmp(args[0], "rm") == 0)
 	{
-	    return TRUE; // this needs to be changed
+		return TRUE; // this needs to be changed
 	}
 	else if (strcmp(args[0], "mount") == 0)
 	{
-	    return TRUE; // this needs to be changed
+		return TRUE; // this needs to be changed
 	}
 	else if (strcmp(args[0], "umount") == 0)
 	{
-	    return TRUE; // this needs to be changed
+		return TRUE; // this needs to be changed
 	}
-	else if (redir_flag == TRUE) {
-	  return TRUE;
+	else if (redir_flag == TRUE)
+	{
+		return TRUE;
 	}
 	else
 		return FALSE;
@@ -1257,10 +1351,11 @@ int check_built_in(Job *job)
 int exeBuiltIn(char **args, int argn, sigset_t child_mask)
 {
 	int redir_flag = FALSE;
-  	if(IsRightRedirection(args, argn) == TRUE)
-    		redir_flag = TRUE;
-	if (strlen(curr_path) >= 128) {
-		char* temp = pwd(string(curr_path));
+	if (IsRightRedirection(args, argn) == TRUE)
+		redir_flag = TRUE;
+	if (strlen(curr_path) >= 128)
+	{
+		char *temp = pwd(string(curr_path));
 		free(temp);
 	}
 	if (strcmp(args[0], "kill") == 0)
@@ -1286,69 +1381,72 @@ int exeBuiltIn(char **args, int argn, sigset_t child_mask)
 	}
 	else if (strcmp(args[0], "chmod") == 0)
 	{
-	    return fs_chmod(args, argn); // this needs to be changed
+		return fs_chmod(args, argn); // this needs to be changed
 	}
 	else if (strcmp(args[0], "mkdir") == 0)
 	{
-	    return fs_mkdir(args, argn); // this needs to be changed
+		return fs_mkdir(args, argn); // this needs to be changed
 	}
 	else if (strcmp(args[0], "rmdir") == 0)
 	{
-	    return fs_rmdir(args, argn); // this needs to be changed
+		return fs_rmdir(args, argn); // this needs to be changed
 	}
 	else if (strcmp(args[0], "cd") == 0)
 	{
-	    return fs_cd(args, argn); // this needs to be changed
+		return fs_cd(args, argn); // this needs to be changed
 	}
 	else if (strcmp(args[0], "pwd") == 0)
 	{
-	    fs_pwd(); // this needs to be changed
-	    return TRUE;
+		fs_pwd(); // this needs to be changed
+		return TRUE;
 	}
 	else if (strcmp(args[0], "cat") == 0)
 	{
-	    return microcat_calling(args, argn);
+		return microcat_calling(args, argn);
 	}
 	else if (strcmp(args[0], "more") == 0)
 	{
-	  more_calling(args, argn);
-	  return TRUE;
+		more_calling(args, argn);
+		return TRUE;
 	}
 	else if (strcmp(args[0], "rm") == 0)
 	{
-	    if(argn == 2) {
-	    	int result = fs_rm(args[1]);
-	    	if(result == 0)
-	    		return TRUE;
-	    	else
-	    		return FALSE;
-	    }
-	    else {
-	    	printf("More than one pipe? We don't support any more");
-	    	return FALSE;
-	    }
+		if (argn == 2)
+		{
+			int result = fs_rm(args[1]);
+			if (result == 0)
+				return TRUE;
+			else
+				return FALSE;
+		}
+		else
+		{
+			printf("More than one pipe? We don't support any more");
+			return FALSE;
+		}
 		return TRUE; // this needs to be changed
 	}
 	else if (strcmp(args[0], "mount") == 0)
 	{
-	    if(argn != 2)
-		    return FALSE;
-	    else
-		f_mount("/",args[1]);
-	    return TRUE; // this needs to be changed
+		if (argn != 2)
+			return FALSE;
+		else
+			f_mount("/", args[1]);
+		return TRUE; // this needs to be changed
 	}
 	else if (strcmp(args[0], "umount") == 0)
 	{
-	    if(argn != 2)
-		    return FALSE;
-	    else
-		f_unmount(args[1]);
-	    return TRUE; // this needs to be changed
+		if (argn != 2)
+			return FALSE;
+		else
+			f_unmount(args[1]);
+		return TRUE; // this needs to be changed
 	}
-	else if (redir_flag == TRUE) {
-	  redirection(args,argn);
-          return TRUE;
-        }
+	else if (redir_flag == TRUE)
+	{
+		redirection(args, argn);
+		return TRUE;
+	}
 	else
 	{
 		perror("invalid input, check_built_in wrong probably\n");
