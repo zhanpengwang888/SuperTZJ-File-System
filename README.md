@@ -16,7 +16,6 @@ The difference between our file system and design doc:
 Known bugs and limitations
 	limitations:
 	1. Our file system still doesn not support Superuser privilege. Basically, the shell should have Superuser privilege so it can bypass the permission of writeonly and execute only file to print their status on the screen. The way we think to fix this problem is to add an extra argument to know whether it is superuser who calls the function. If it is superuser, then close all permission checks.
-	2. The redirection can not work generally in our file system, the redirection depends on cat command to work. So it is hard to test big file. We provide a test_large.cpp test case in our Testing folder to cover this case though.
 	3.In the file name, we can not let user create file name with "/", because that is the special symbol for directory. The file can be created, but without "/".
 	4. We didn't have time to deal with memory leak, and there are several minor invalid read in memory.
 	5. We didn't test the i3block. So it might be some problems in our i3block.
