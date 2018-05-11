@@ -126,7 +126,7 @@ int fs_ls(char **args, int argn) {
                 }
                 if(mode == 1) {
                         if(strcmp(cur_entry->file_name,".")== 0 || strcmp(cur_entry->file_name,"..") == 0) {
-                                printf("%s\t",cur_entry->file_name);
+                                printf("%s\n",cur_entry->file_name);
                                 continue;
                         }
                         char* cur_file = get_cur_file_path(curr_path,cur_entry->file_name);
@@ -136,12 +136,12 @@ int fs_ls(char **args, int argn) {
                                 continue;
                         }
                         if(f_status->type == DIRECTORY_FILE)
-                                printf("%s%s\t",cur_entry->file_name,"/");
+                                printf("%s%s\n",cur_entry->file_name,"/");
                         else if(f_status->permission == 1 || f_status->permission == 3 || f_status->permission == 5 || f_status->permi\
 ssion == 7)
-                                printf("%s%s\t",cur_entry->file_name,"*");
+                                printf("%s%s\n",cur_entry->file_name,"*");
                         else
-                                printf("%s\t",cur_entry->file_name);
+                                printf("%s\n",cur_entry->file_name);
                         free(cur_file);
                         f_close(cur_fd);
                 }
@@ -196,7 +196,7 @@ ile_name);
                         if(strcmp(cur_entry->file_name,".")== 0 || strcmp(cur_entry->file_name,"..") == 0) {
                                 continue;
                         }
-                        printf("%s\t",cur_entry->file_name);
+                        printf("%s\n",cur_entry->file_name);
                 }
         }
         return TRUE;
